@@ -92,6 +92,7 @@ Mozilla's [signing and distribution overview](https://extensionworkshop.com/docu
 - This extension does not geocode addresses; imports and edits require decimal latitude/longitude.
 - `browser.storage.local` persists with the Firefox profile. Clearing extension/site data or removing the extension may remove it.
 - `browser.storage.local` does not provide a compare-and-swap operation. The repository serializes mutations within one extension context, preventing same-page save/delete/import races; simultaneous mutations from separate extension contexts can still conflict at the browser storage API boundary.
+- The validated page-world transport renders at most 250 saved locations in one tracker tab to bound page-controlled parser and Leaflet work. All saved records remain visible and editable in the management page.
 
 ## License
 
