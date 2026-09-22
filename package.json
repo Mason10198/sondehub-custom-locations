@@ -1,0 +1,16 @@
+{
+  "name": "sondehub-custom-locations",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Firefox WebExtension for custom SondeHub Tracker map locations",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "lint": "node scripts/check-extension.js",
+    "package": "python3 scripts/package.py"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}

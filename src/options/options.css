@@ -1,0 +1,14 @@
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; line-height: 1.45; }
+body { margin: 0; background: Canvas; color: CanvasText; }
+main { max-width: 760px; margin: auto; padding: 1rem; }
+h1 { margin-bottom: .1rem; font-size: clamp(1.5rem, 5vw, 2rem); } h2 { font-size: 1.2rem; margin-top: 0; }
+.card { border: 1px solid color-mix(in srgb, CanvasText 25%, transparent); border-radius: .65rem; padding: 1rem; margin: 1rem 0; }
+label { display: grid; gap: .3rem; margin: .65rem 0; } input, select, button { font: inherit; min-height: 2.55rem; box-sizing: border-box; } input, select { width: 100%; min-width: 0; padding: .4rem; }
+button { padding: .4rem .8rem; border-radius: .35rem; border: 1px solid currentColor; cursor: pointer; } button.danger { color: #b42318; }
+.coordinates, .actions, .section-heading { display: flex; gap: .75rem; align-items: end; } .coordinates > label { flex: 1; min-width: 0; }
+.actions { margin-top: .85rem; } fieldset { margin: .85rem 0; } fieldset label { display: inline-flex; margin-right: 1rem; align-items: center; }
+.message, .report { min-height: 1.4em; } .error { color: #b42318; } .success { color: #18794e; } .muted { opacity: .75; }
+.location-list { list-style: none; padding: 0; margin: 0; } .location-list li { display: flex; justify-content: space-between; gap: .8rem; padding: .7rem 0; border-top: 1px solid color-mix(in srgb, CanvasText 18%, transparent); }
+.location-list p { margin: .1rem 0; } .row-actions { display: flex; gap: .4rem; align-items: center; }
+code { overflow-wrap: anywhere; }
+@media (max-width: 460px) { main { padding: .7rem; } .coordinates { display: block; } .section-heading { align-items: center; } .location-list li { align-items: start; flex-direction: column; } .row-actions { width: 100%; } .row-actions button { flex: 1; } }

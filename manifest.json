@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "SondeHub Custom Locations",
+  "version": "1.0.0",
+  "description": "Add and manage local custom markers on the public SondeHub Tracker.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://tracker.sondehub.org/*",
+    "https://sondehub.org/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://tracker.sondehub.org/*", "https://sondehub.org/*"],
+      "js": ["src/shared/locations.js", "src/shared/protocol.js", "src/content/main-adapter.js"],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://tracker.sondehub.org/*", "https://sondehub.org/*"],
+      "js": ["src/shared/locations.js", "src/shared/protocol.js", "src/content/storage-bridge.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_ui": {
+    "page": "src/options/options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "48": "icons/icon.svg",
+    "96": "icons/icon.svg"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "sondehub-custom-locations@sondehub-tools.local",
+      "data_collection_permissions": {
+        "required": ["none"]
+      },
+      "strict_min_version": "140.0"
+    },
+    "gecko_android": {
+      "strict_min_version": "142.0"
+    }
+  }
+}

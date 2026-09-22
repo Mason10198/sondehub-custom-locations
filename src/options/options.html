@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SondeHub Custom Locations</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main>
+    <header><h1>SondeHub Custom Locations</h1><p>Private markers stored only in this browser.</p></header>
+    <section class="card" aria-labelledby="add-title">
+      <h2 id="add-title">Add or edit location</h2>
+      <form id="location-form">
+        <input id="location-id" type="hidden">
+        <label>Name <input id="name" required maxlength="120" autocomplete="off"></label>
+        <label>Icon <select id="icon"></select></label>
+        <div class="coordinates"><label>Latitude <input id="lat" required inputmode="decimal" placeholder="-90 to 90"></label><label>Longitude <input id="long" required inputmode="decimal" placeholder="-180 to 180"></label></div>
+        <div class="actions"><button type="submit">Save location</button><button id="cancel-edit" type="button" hidden>Cancel edit</button></div>
+      </form>
+      <p id="form-message" class="message" role="status" aria-live="polite"></p>
+    </section>
+    <section class="card" aria-labelledby="import-title">
+      <h2 id="import-title">Import CSV</h2>
+      <p>Required columns: <code>name,icon,lat,long</code>. Quoted fields and commas in names are supported.</p>
+      <input id="csv-file" type="file" accept=".csv,text/csv">
+      <fieldset><legend>Import mode</legend><label><input type="radio" name="import-mode" value="add" checked> Add to existing</label><label><input type="radio" name="import-mode" value="replace"> Replace all existing</label></fieldset>
+      <button id="import-button" type="button">Import CSV</button>
+      <div id="import-report" class="report" role="status" aria-live="polite"></div>
+    </section>
+    <section class="card" aria-labelledby="saved-title">
+      <div class="section-heading"><h2 id="saved-title">Saved locations</h2><button id="delete-all" class="danger" type="button">Delete all</button></div>
+      <p id="count" class="muted"></p>
+      <ul id="locations" class="location-list"></ul>
+    </section>
+  </main>
+  <script src="../shared/locations.js"></script>
+  <script src="../shared/storage.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
