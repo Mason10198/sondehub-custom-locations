@@ -9,7 +9,7 @@
 
   function setMessage(target, text, kind) { target.textContent = text; target.className = `message ${kind || ""}`; }
   function storageError(target, operation) { setMessage(target, `Unable to ${operation}. Please try again.`, "error"); }
-  function resetForm() { form.reset(); fields.id.value = ""; fields.icon.value = SondeHubLocations.DEFAULT_ICON; document.getElementById("cancel-edit").hidden = true; }
+  function resetForm() { form.reset(); fields.id.value = ""; fields.icon.value = SondeHubLocations.DEFAULT_ICON; renderIconPreview(); document.getElementById("cancel-edit").hidden = true; }
   function locationFromForm() { return { id: fields.id.value, name: fields.name.value, icon: fields.icon.value, lat: fields.lat.value, long: fields.long.value }; }
   async function render() {
     try {
@@ -19,12 +19,12 @@
       for (const location of locations) {
         const item = document.createElement("li");
         const details = document.createElement("div");
-        const name = document.createElement("strong"); name.textContent = `${location.icon}: ${location.name}`;
+        const name = document.createElement("strong"); name.textContent = `${SondeHubIcons.iconFor(location.icon).label}: ${location.name}`;
         const coords = document.createElement("p"); coords.textContent = `${location.lat}, ${location.long}`;
         details.append(name, coords);
         const actions = document.createElement("div"); actions.className = "row-actions";
         const edit = document.createElement("button"); edit.type = "button"; edit.textContent = "Edit";
-        edit.addEventListener("click", () => { Object.entries(location).forEach(([key, value]) => { fields[key].value = value; }); document.getElementById("cancel-edit").hidden = false; fields.name.focus(); window.scrollTo({ top: 0, behavior: "smooth" }); });
+        edit.addEventListener("click", () => { Object.entries(location).forEach(([key, value]) => { fields[key].value = value; }); renderIconPreview(); document.getElementById("cancel-edit").hidden = false; fields.name.focus(); window.scrollTo({ top: 0, behavior: "smooth" }); });
         const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Delete"; remove.className = "danger";
         remove.addEventListener("click", async () => {
           if (!window.confirm(`Delete “${location.name}”?`)) return;
@@ -38,7 +38,15 @@
     }
   }
 
-  SondeHubLocations.ICONS.forEach((icon) => { const option = document.createElement("option"); option.value = icon; option.textContent = icon; fields.icon.append(option); });
+  function renderIconPreview() {
+    const icon = SondeHubIcons.iconFor(fields.icon.value);
+    const parsedSvg = new DOMParser().parseFromString(SondeHubIcons.svgFor(icon.key), "image/svg+xml").documentElement;
+    document.getElementById("icon-preview-image").replaceChildren(document.importNode(parsedSvg, true));
+    document.getElementById("icon-preview-label").textContent = `${icon.label} (${icon.key})`;
+  }
+
+  SondeHubIcons.ICONS.forEach((icon) => { const option = document.createElement("option"); option.value = icon.key; option.textContent = `${icon.label} (${icon.key})`; fields.icon.append(option); });
+  fields.icon.addEventListener("change", renderIconPreview);
   resetForm();
   form.addEventListener("submit", async (event) => {
     event.preventDefault();

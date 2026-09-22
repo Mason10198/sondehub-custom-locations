@@ -5,7 +5,7 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT = ROOT / "dist" / "sondehub-custom-locations-1.0.0.xpi"
-INCLUDE = (ROOT / "manifest.json", ROOT / "LICENSE", ROOT / "icons", ROOT / "src")
+INCLUDE = (ROOT / "manifest.json", ROOT / "LICENSE", ROOT / "THIRD_PARTY_NOTICES.md", ROOT / "icons", ROOT / "src", ROOT / "third_party")
 
 files = []
 for entry in INCLUDE:

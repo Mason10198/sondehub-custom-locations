@@ -14,7 +14,8 @@
       <form id="location-form">
         <input id="location-id" type="hidden">
         <label>Name <input id="name" required maxlength="120" autocomplete="off"></label>
-        <label>Icon <select id="icon"></select></label>
+        <label>Icon <select id="icon" aria-describedby="icon-preview-label"></select></label>
+        <div class="icon-preview" id="icon-preview" aria-live="polite"><span id="icon-preview-image" aria-hidden="true"></span><span id="icon-preview-label"></span></div>
         <div class="coordinates"><label>Latitude <input id="lat" required inputmode="decimal" placeholder="-90 to 90"></label><label>Longitude <input id="long" required inputmode="decimal" placeholder="-180 to 180"></label></div>
         <div class="actions"><button type="submit">Save location</button><button id="cancel-edit" type="button" hidden>Cancel edit</button></div>
       </form>
@@ -34,6 +35,7 @@
       <ul id="locations" class="location-list"></ul>
     </section>
   </main>
+  <script src="../shared/icons.js"></script>
   <script src="../shared/locations.js"></script>
   <script src="../shared/storage.js"></script>
   <script src="options.js"></script>

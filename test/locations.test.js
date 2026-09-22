@@ -8,6 +8,14 @@ test("normalizes supported icons and defaults invalid values", () => {
   assert.equal(api.normalizeIcon("unknown"), "pin");
   assert.equal(api.normalizeIcon(""), "pin");
 });
+test("accepts every catalog icon in forms and CSV while defaulting bad icon values", () => {
+  assert.ok(api.ICONS.length >= 20);
+  for (const icon of api.ICONS) {
+    assert.equal(api.validateLocation({ name: icon.key, icon: icon.key, lat: 1, long: 2 }).value.icon, icon.key);
+    assert.equal(api.importCsv(`name,icon,lat,long\n${icon.key},${icon.key},1,2`).locations[0].icon, icon.key);
+  }
+  assert.equal(api.validateLocation({ name: "Fallback", icon: "", lat: 1, long: 2 }).value.icon, "pin");
+});
 test("validates coordinate bounds and name", () => {
   assert.equal(api.validateLocation({ name: "A", lat: "90", long: "-180", icon: "star" }).ok, true);
   assert.deepEqual(api.validateLocation({ name: "", lat: 91, long: "x" }).errors, ["name is required", "latitude must be a number from -90 to 90", "longitude must be a number from -180 to 180"]);

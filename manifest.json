@@ -6,18 +6,19 @@
   "permissions": ["storage"],
   "host_permissions": [
     "https://tracker.sondehub.org/*",
-    "https://sondehub.org/*"
+    "https://sondehub.org/*",
+    "https://amateur.sondehub.org/*"
   ],
   "content_scripts": [
     {
-      "matches": ["https://tracker.sondehub.org/*", "https://sondehub.org/*"],
-      "js": ["src/shared/locations.js", "src/shared/protocol.js", "src/content/main-adapter.js"],
+      "matches": ["https://tracker.sondehub.org/*", "https://sondehub.org/*", "https://amateur.sondehub.org/*"],
+      "js": ["src/shared/icons.js", "src/shared/locations.js", "src/shared/protocol.js", "src/content/main-adapter.js"],
       "run_at": "document_idle",
       "world": "MAIN"
     },
     {
-      "matches": ["https://tracker.sondehub.org/*", "https://sondehub.org/*"],
-      "js": ["src/shared/locations.js", "src/shared/protocol.js", "src/content/storage-bridge.js"],
+      "matches": ["https://tracker.sondehub.org/*", "https://sondehub.org/*", "https://amateur.sondehub.org/*"],
+      "js": ["src/shared/icons.js", "src/shared/locations.js", "src/shared/protocol.js", "src/content/storage-bridge.js"],
       "run_at": "document_idle"
     }
   ],

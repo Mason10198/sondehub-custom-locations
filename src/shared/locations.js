@@ -6,14 +6,9 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function locationsFactory() {
   "use strict";
 
-  const DEFAULT_ICON = "pin";
-  const ICONS = Object.freeze(["pin", "home", "tower", "launch", "landing", "star", "warning", "vehicle"]);
-  const ICON_SET = new Set(ICONS);
-
-  function normalizeIcon(icon) {
-    const value = String(icon == null ? "" : icon).trim().toLowerCase();
-    return ICON_SET.has(value) ? value : DEFAULT_ICON;
-  }
+  const iconCatalog = typeof module === "object" && module.exports ? require("./icons.js") : globalThis.SondeHubIcons;
+  if (!iconCatalog) throw new Error("SondeHubIcons must load before SondeHubLocations");
+  const { DEFAULT_ICON, ICONS, normalizeIcon } = iconCatalog;
 
   function createId() {
     if (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function") return globalThis.crypto.randomUUID();

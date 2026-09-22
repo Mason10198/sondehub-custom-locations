@@ -1,28 +1,31 @@
 # SondeHub Custom Locations
 
-A local-only, dependency-free Firefox WebExtension that adds personal markers to the public [SondeHub Tracker](https://tracker.sondehub.org/). It works on desktop Firefox 140+ and Firefox for Android 142+. Displayed marker data is inspectable by the tracker site while its tab is open; see [Privacy and permissions](#privacy-and-permissions).
+A local-only, dependency-free Firefox WebExtension that adds personal markers to the public [SondeHub Tracker](https://tracker.sondehub.org/) and [SondeHub Amateur](https://amateur.sondehub.org/). It works on desktop Firefox 140+ and Firefox for Android 142+. Displayed marker data is inspectable by the supported site while its tab is open; see [Privacy and permissions](#privacy-and-permissions).
 
 ## Features
 
-- Runs only on `tracker.sondehub.org` and `sondehub.org`.
+- Runs only on `tracker.sondehub.org`, `sondehub.org`, and `amateur.sondehub.org`.
 - Adds markers in an independent Leaflet layer named **Custom locations**.
 - Saves locations indefinitely in `browser.storage.local`; the extension makes no network requests.
 - Add, edit, delete, or confirm deletion of all locations from a responsive settings page.
 - Import standard CSV with `name,icon,lat,long`; choose **add** or **replace all**.
 - Reports each skipped CSV row with its row number and reason. Valid rows are still imported.
-- Built-in icons: `pin`, `home`, `tower`, `launch`, `landing`, `star`, `warning`, and `vehicle`. Missing or invalid icons become `pin`.
-- Open Tracker tabs update immediately when storage changes, without reloading or re-importing.
+- Includes 24 fixed, licensed Heroicons: `pin`, `home`, `tower`, `launch`, `landing`, `star`, `warning`, `vehicle`, `flag`, `signal`, `airplane`, `camera`, `fire`, `tools`, `recovery`, `person`, `cloud`, `info`, `lightning`, `science`, `globe`, `search`, `map`, and `radio`. Missing or invalid icons become `pin`.
+- The options page uses human-readable icon names and a live SVG preview from the same fixed catalog used by markers.
+- Open supported SondeHub tabs update immediately when storage changes, without reloading or re-importing.
 
 Try [`examples/locations.csv`](examples/locations.csv). CSV uses standard quoted fields: commas and escaped quotes in names are supported.
 
 ## Architecture
 
-Firefox content scripts run in an isolated world and cannot see SondeHub's `window.map` or `window.L`. The extension therefore deliberately has two small pieces:
+Firefox content scripts run in an isolated world and cannot see the site's `window.map` or `window.L`. The extension therefore deliberately has two small pieces:
 
 1. `src/content/storage-bridge.js` runs in the isolated world, reads only `browser.storage.local`, and performs a one-way initial/update push of validated display fields (`name`, `icon`, latitude, longitude) as a JSON-string `CustomEvent` detail. Text transport avoids Firefox's cross-world object-detail restriction. It does not handle page-controlled request or lifecycle events.
-2. `src/content/main-adapter.js` runs in Firefox's MAIN content-script world, is injected before the bridge, waits for `#map`, `window.L`, and SondeHub's Leaflet map, then creates and owns one `L.LayerGroup`. It accepts only bounded, versioned JSON snapshots with the exact display-field schema, and never reads or modifies tracker vehicle/launch data.
+2. `src/content/main-adapter.js` runs in Firefox's MAIN content-script world, is injected before the bridge, waits for `#map`, `window.L`, and the site's Leaflet map, then creates and owns one `L.LayerGroup`. The same adapter is host-agnostic across Tracker and Amateur: it uses only the shared `window.L`, `window.map`, and `window.layers` integration seam. It accepts only bounded, versioned JSON snapshots with the exact display-field schema, and never reads or modifies tracker vehicle/launch data.
 
-The pure CSV/validation and storage modules are under `src/shared/` so their behavior is tested outside Firefox. Popups use DOM `textContent`, not user-provided HTML. Marker icon markup is static, packaged CSS-free Leaflet `divIcon` markup.
+`src/shared/icons.js` is the one fixed icon catalog used by MAIN and options contexts. It embeds only a vetted allowlist of static Heroicons SVG markup; no CSV, storage, or page input can supply SVG. The original selected `optimized/24/outline` SVGs, MIT license, and pinned upstream provenance are vendored under `third_party/heroicons/` and documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+The pure CSV/validation and storage modules are under `src/shared/` so their behavior is tested outside Firefox. Popups use DOM `textContent`, not user-provided HTML.
 
 ## Development and testing
 
@@ -30,17 +33,18 @@ Requirements: Node.js 20+ and Python 3 for packaging. No runtime npm dependencie
 
 ```sh
 npm install          # creates package-lock.json; no packages are downloaded
-npm run lint         # manifest checks plus JavaScript syntax checks
-npm test             # CSV/validation/storage tests
+npm run lint         # manifest, exact-host, packaged-asset, and JavaScript checks
+npm test             # catalog, CSV/validation, protocol, storage, and adapter tests
 npm run package      # writes dist/sondehub-custom-locations-1.0.0.xpi
+npx web-ext@latest lint --source-dir .
 ```
 
 ### Temporary installation — desktop Firefox
 
 1. Run `npm run lint` and open `about:debugging#/runtime/this-firefox`.
 2. Choose **Load Temporary Add-on…** and select `manifest.json` in this repository.
-3. Open `https://tracker.sondehub.org/`, then use the extension's **Preferences** from `about:addons` to add or import locations.
-4. Temporary add-ons disappear when Firefox restarts. Check the Leaflet layer selector for **Custom locations** where Tracker exposes one.
+3. Open `https://tracker.sondehub.org/` or `https://amateur.sondehub.org/`, then use the extension's **Preferences** from `about:addons` to add or import locations.
+4. Temporary add-ons disappear when Firefox restarts. Check the Leaflet layer selector for **Custom locations** where the site exposes one.
 
 ### Firefox for Android — temporary development with ADB
 
@@ -57,8 +61,7 @@ Use this path for an edit/test loop. It is a **temporary** installation: Firefox
      --android-device DEVICE_SERIAL --firefox-apk org.mozilla.fenix
    ```
 
-   `web-ext run` loads the unpacked extension into Firefox's main profile and reloads it as sources change. On desktop Firefox, open `about:debugging`, enable USB devices, select the device, and click **Connect** to inspect the extension and page contexts. See Mozilla's [Firefox for Android development guide](https://extensionworkshop.com/documentation/develop/developing-extensions-for-firefox-for-android) and [`web-ext run` reference](https://extensionworkshop.com/documentation/develop/web-ext-command-reference) for current channel and remote-debugging details.
-4. On the phone, add a location in the add-on's options, open `https://tracker.sondehub.org/`, and confirm the **Custom locations** overlay and marker. Change or delete it and confirm the open Tracker tab updates.
+4. On the phone, add a location in the add-on's options, open a supported SondeHub site, and confirm the **Custom locations** overlay and marker. Change or delete it and confirm the open tab updates.
 5. **Temporary-install restart check:** force-close or restart Firefox. Confirm this temporary add-on is gone, then rerun `web-ext run`; do not use this route to test persistence across browser restarts.
 
 ### Firefox for Android — persistent signed installation
@@ -68,32 +71,32 @@ For a restart-persistence test, use a Mozilla-signed build distributed by a chan
 1. Run `npm run package`, then submit the XPI through the [AMO Developer Hub](https://addons.mozilla.org/developers/) as a listed Android-compatible add-on, or use AMO's supported signing/self-distribution workflow. Mozilla signing is required for Release and Beta installations.
 2. Install the resulting AMO-distributed add-on through Firefox for Android's Add-ons flow. Availability depends on the Firefox Android channel, version, and AMO's current Android compatibility/review status; verify the listing is offered on the target device instead of assuming every AMO add-on is installable there.
 3. For developer-controlled persistent testing on Firefox Android **Nightly or Beta**, Mozilla documents a custom add-on collection path. Follow its [expanded Android extension support instructions](https://blog.mozilla.org/addons/2020/09/29/expanded-extension-support-in-firefox-for-android-nightly/) exactly (enable the Debug menu, then configure the custom collection). Use only an AMO-hosted, signed add-on in that collection.
-4. Add a location, fully restart Firefox, reopen the add-on and Tracker, and verify both the saved location and its **Custom locations** marker remain. Removing the add-on or clearing its extension data is expected to remove `browser.storage.local` data.
 
 ## Packaging and signing
 
-`npm run package` produces an unsigned XPI (a ZIP with an `.xpi` extension) in `dist/`. It includes only the extension runtime files, manifest, and license, sorted by filename with ZIP extra fields omitted.
+`npm run package` produces an unsigned XPI (a ZIP with an `.xpi` extension) in `dist/`. It includes only extension runtime files, the project and third-party license notices, and vendored Heroicons assets, sorted by filename with ZIP extra fields omitted.
 
 Mozilla's [signing and distribution overview](https://extensionworkshop.com/documentation/publish/signing-and-distribution-overview/) describes the supported AMO channels and review requirements. The committed Gecko ID is stable and must not be changed after signing. The manifest declares `browser_specific_settings.gecko.data_collection_permissions.required: ["none"]`, as required for new AMO submissions. Firefox 140 (desktop) and 142 (Android) are the minimum versions because those releases added support for this signing declaration and built-in consent. Do not upload development builds containing user data.
 
 ## Privacy and permissions
 
 - **Permission:** `storage` stores your locations locally in Firefox.
-- **Host access:** exact SondeHub Tracker hosts only, to render those markers.
-- No backend, account, analytics, telemetry, tracking, cloud database, or network requests are added by this extension.
+- **Host access:** exactly the three supported SondeHub hosts, only to render those markers.
+- No backend, account, analytics, telemetry, tracking, cloud database, CDN, or network requests are added by this extension.
 - The AMO data-collection declaration is `none`: the extension does not collect or transmit data outside the add-on or local browser.
 - Deleting all locations removes the extension's `locations` storage key. Browser profile sync/backup behavior is controlled by Firefox, not this extension.
-- **Tracker-tab boundary:** when a supported tracker tab is open, the displayed marker names and coordinates are deliberately passed to that tab's page realm and are inspectable by the site because Leaflet must render them on the site's existing map. They are not secret from that tracker page. The one-way bridge exports only rendering fields and never accepts page-triggered requests for fresh storage reads.
+- **Site-tab boundary:** when a supported site tab is open, the displayed marker names and coordinates are deliberately passed to that tab's page realm and are inspectable by the site because Leaflet must render them on the site's existing map. They are not secret from that page. The one-way bridge exports only rendering fields and never accepts page-triggered requests for fresh storage reads.
 
-## Limitations
+## Limitations and platform support
 
-- SondeHub is a third-party web application. Its map globals or layer-control behavior may change; the adapter fails quietly rather than modifying unrelated Tracker data.
-- Marker updates need an already-open SondeHub page and its Leaflet map to be initialized. Saved data remains available for later tabs.
+- SondeHub Tracker and Amateur are third-party web applications. Their map globals or layer-control behavior may change; the adapter fails quietly rather than modifying unrelated site data.
+- Marker updates need an already-open supported SondeHub page and its Leaflet map to be initialized. Saved data remains available for later tabs.
 - This extension does not geocode addresses; imports and edits require decimal latitude/longitude.
 - `browser.storage.local` persists with the Firefox profile. Clearing extension/site data or removing the extension may remove it.
 - `browser.storage.local` does not provide a compare-and-swap operation. The repository serializes mutations within one extension context, preventing same-page save/delete/import races; simultaneous mutations from separate extension contexts can still conflict at the browser storage API boundary.
-- The validated page-world transport renders at most 250 saved locations in one tracker tab to bound page-controlled parser and Leaflet work. All saved records remain visible and editable in the management page.
+- The validated page-world transport renders at most 250 saved locations in one site tab to bound page-controlled parser and Leaflet work. All saved records remain visible and editable in the management page.
+- **Firefox for iOS is not supported:** it cannot run Firefox WebExtensions; Mozilla documents that [add-ons are unavailable on Firefox for iOS](https://support.mozilla.org/en-US/kb/add-ons-firefox-ios). Safari Web Extensions require a separate Xcode/iOS app port—this XPI does not work in Safari.
 
 ## License
 
-[MIT](LICENSE).
+Project code is [MIT](LICENSE). Heroicons are separately MIT-licensed; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

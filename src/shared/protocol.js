@@ -45,7 +45,7 @@
   function parsedLocation(value) {
     if (!value || typeof value !== "object" || Array.isArray(value) || !hasExactKeys(value, ["name", "icon", "lat", "long"])) return null;
     if (typeof value.name !== "string" || typeof value.icon !== "string" || typeof value.lat !== "number" || typeof value.long !== "number") return null;
-    if (!locationsApi.ICONS.includes(value.icon)) return null;
+    if (locationsApi.normalizeIcon(value.icon) !== value.icon) return null;
     return displayLocation(value);
   }
 

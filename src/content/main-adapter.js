@@ -5,7 +5,8 @@
   const SENTINEL = "__sondeHubCustomLocationsAdapter";
   const LABEL = "Custom locations";
   const MAX_CONTROL_WAIT_ATTEMPTS = 240;
-  const glyphs = Object.freeze({ pin: "●", home: "⌂", tower: "▥", launch: "↑", landing: "↓", star: "★", warning: "!", vehicle: "▰" });
+  const iconCatalog = window.SondeHubIcons;
+  if (!iconCatalog) return;
 
   if (window[SENTINEL]) return;
   window[SENTINEL] = true;
@@ -19,8 +20,8 @@
     return window.L && window.map && typeof window.map.addLayer === "function" && window.map._container === mapElement ? window.map : null;
   }
   function iconFor(iconName) {
-    const safeIcon = Object.hasOwn(glyphs, iconName) ? iconName : "pin";
-    return window.L.divIcon({ className: "shcl-marker-shell", html: `<span style="display:block;width:24px;height:24px;line-height:24px;border:2px solid #123b5d;border-radius:50%;background:#f7b733;color:#123b5d;text-align:center;font:bold 16px system-ui,sans-serif;box-shadow:0 1px 3px #0008" aria-hidden="true">${glyphs[safeIcon]}</span>`, iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14] });
+    const safeIcon = iconCatalog.normalizeIcon(iconName);
+    return window.L.divIcon({ className: "shcl-marker-shell", html: `<span style="display:grid;width:24px;height:24px;place-items:center;border:2px solid #123b5d;border-radius:50%;background:#f7b733;color:#123b5d;box-shadow:0 1px 3px #0008" aria-hidden="true">${iconCatalog.svgFor(safeIcon)}</span>`, iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14] });
   }
   function popupFor(location) {
     const container = document.createElement("div");

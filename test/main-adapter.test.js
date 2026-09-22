@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 require("../src/shared/locations.js");
+const icons = require("../src/shared/icons.js");
 const protocol = require("../src/shared/protocol.js");
 
 function runAdapter() {
@@ -38,6 +39,7 @@ function runAdapter() {
       marker: (coordinates, options) => ({ coordinates, options, bindPopup(popup) { this.popup = popup; } })
     },
     map: { _container: mapElement, addLayer() {} },
+    SondeHubIcons: icons,
     SondeHubLocationProtocol: protocol,
     addEventListener() {},
     setInterval(callback) { intervals.push(callback); return intervals.length - 1; },
@@ -56,6 +58,8 @@ test("registers a late Leaflet layer control once without retrying marker render
   const message = protocol.serialize([{ id: "home", name: "Home", icon: "pin", lat: 1, long: 2 }]);
   adapter.listeners.get("sondehub-custom-locations:update")({ detail: message });
   assert.equal(adapter.group.markers.length, 1);
+  assert.match(adapter.group.markers[0].options.icon.html, /<svg/);
+  assert.match(adapter.group.markers[0].options.icon.html, /<path/);
   const rendersBeforeControl = adapter.group.clearCount;
   adapter.intervals[0]();
   assert.equal(adapter.group.clearCount, rendersBeforeControl);
