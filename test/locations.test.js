@@ -20,6 +20,15 @@ test("validates coordinate bounds and name", () => {
   assert.equal(api.validateLocation({ name: "A", lat: "90", long: "-180", icon: "star" }).ok, true);
   assert.deepEqual(api.validateLocation({ name: "", lat: 91, long: "x" }).errors, ["name is required", "latitude must be a number from -90 to 90", "longitude must be a number from -180 to 180"]);
 });
+test("defaults, normalizes, and validates marker colors", () => {
+  const defaults = api.validateLocation({ name: "Default", icon: "pin", lat: 1, long: 2 }).value;
+  assert.equal(defaults.iconColor, "#000000");
+  assert.equal(defaults.backgroundColor, "#facc15");
+  const custom = api.validateLocation({ name: "Custom", icon: "pin", iconColor: " #FFFFFF ", background_color: "#2563EB", lat: 1, long: 2 }).value;
+  assert.equal(custom.iconColor, "#ffffff");
+  assert.equal(custom.backgroundColor, "#2563eb");
+  assert.deepEqual(api.validateLocation({ name: "Bad", iconColor: "black", backgroundColor: "#123", lat: 1, long: 2 }).errors, ["icon color must be a six-digit hex color such as #000000", "background color must be a six-digit hex color such as #facc15"]);
+});
 test("parses standard quoted CSV fields and escaped quotes", () => {
   assert.deepEqual(api.parseCsv('name,icon,lat,long\r\n"A, B",star,1,2\r\n"A ""quote""",pin,3,4'), [["name", "icon", "lat", "long"], ["A, B", "star", "1", "2"], ['A "quote"', "pin", "3", "4"]]);
 });
@@ -31,6 +40,17 @@ test("imports valid rows and reports physical invalid row numbers", () => {
   assert.equal(result.locations.length, 1);
   assert.equal(result.locations[0].icon, "16-solid/map-pin");
   assert.deepEqual(result.skipped, [{ row: 3, reason: "latitude must be a number from -90 to 90" }, { row: 4, reason: "name is required" }]);
+});
+test("imports optional marker colors and defaults blank or omitted color columns", () => {
+  const custom = api.importCsv("name,icon,lat,long,icon_color,background_color\nCustom,radio,1,2,#ffffff,#2563eb");
+  assert.deepEqual({ iconColor: custom.locations[0].iconColor, backgroundColor: custom.locations[0].backgroundColor }, { iconColor: "#ffffff", backgroundColor: "#2563eb" });
+  const blank = api.importCsv("name,icon,lat,long,icon_color,background_color\nBlank,radio,1,2,,");
+  assert.deepEqual({ iconColor: blank.locations[0].iconColor, backgroundColor: blank.locations[0].backgroundColor }, { iconColor: "#000000", backgroundColor: "#facc15" });
+  const omitted = api.importCsv("name,icon,lat,long\nOmitted,radio,1,2");
+  assert.deepEqual({ iconColor: omitted.locations[0].iconColor, backgroundColor: omitted.locations[0].backgroundColor }, { iconColor: "#000000", backgroundColor: "#facc15" });
+  const invalid = api.importCsv("name,icon,lat,long,icon_color,background_color\nBad,radio,1,2,red,#123");
+  assert.equal(invalid.locations.length, 0);
+  assert.match(invalid.skipped[0].reason, /icon color.*background color/);
 });
 test("accepts a CSV with leading blank lines while retaining physical row numbers", () => {
   const result = api.importCsv("\n\nname,icon,lat,long\nA,pin,1,2\nB,pin,999,2");

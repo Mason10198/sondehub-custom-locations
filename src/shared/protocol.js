@@ -5,7 +5,7 @@
   root.SondeHubLocationProtocol = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function protocolFactory(locationsApi) {
   "use strict";
-  const VERSION = 1;
+  const VERSION = 2;
   // Bound text before JSON.parse and the rendered marker count afterward.
   // This keeps page-originated events from consuming unbounded parser or map work.
   const MAX_TRANSPORT_CHARS = 65536;
@@ -16,7 +16,7 @@
       const result = locationsApi.validateLocation(input);
       if (!result.ok) return null;
       const value = result.value;
-      return Object.freeze({ name: value.name, icon: value.icon, lat: value.lat, long: value.long });
+      return Object.freeze({ name: value.name, icon: value.icon, iconColor: value.iconColor, backgroundColor: value.backgroundColor, lat: value.lat, long: value.long });
     } catch (_) {
       return null;
     }
@@ -43,9 +43,10 @@
   }
 
   function parsedLocation(value) {
-    if (!value || typeof value !== "object" || Array.isArray(value) || !hasExactKeys(value, ["name", "icon", "lat", "long"])) return null;
-    if (typeof value.name !== "string" || typeof value.icon !== "string" || typeof value.lat !== "number" || typeof value.long !== "number") return null;
+    if (!value || typeof value !== "object" || Array.isArray(value) || !hasExactKeys(value, ["name", "icon", "iconColor", "backgroundColor", "lat", "long"])) return null;
+    if (typeof value.name !== "string" || typeof value.icon !== "string" || typeof value.iconColor !== "string" || typeof value.backgroundColor !== "string" || typeof value.lat !== "number" || typeof value.long !== "number") return null;
     if (locationsApi.normalizeIcon(value.icon) !== value.icon) return null;
+    if (locationsApi.normalizeColor(value.iconColor, "") !== value.iconColor || locationsApi.normalizeColor(value.backgroundColor, "") !== value.backgroundColor) return null;
     return displayLocation(value);
   }
 

@@ -19,9 +19,9 @@
     const mapElement = document.getElementById("map");
     return window.L && window.map && typeof window.map.addLayer === "function" && window.map._container === mapElement ? window.map : null;
   }
-  function iconFor(iconName) {
-    const safeIcon = iconCatalog.normalizeIcon(iconName);
-    return window.L.divIcon({ className: "shcl-marker-shell", html: `<span style="display:grid;width:24px;height:24px;place-items:center;border:2px solid #123b5d;border-radius:50%;background:#f7b733;color:#123b5d;box-shadow:0 1px 3px #0008" aria-hidden="true">${iconCatalog.svgFor(safeIcon)}</span>`, iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14] });
+  function iconFor(location) {
+    const safeIcon = iconCatalog.normalizeIcon(location.icon);
+    return window.L.divIcon({ className: "shcl-marker-shell", html: `<span style="display:grid;width:24px;height:24px;place-items:center;border:2px solid ${location.iconColor};border-radius:50%;background:${location.backgroundColor};color:${location.iconColor};box-shadow:0 1px 3px #0008" aria-hidden="true">${iconCatalog.svgFor(safeIcon)}</span>`, iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14] });
   }
   function popupFor(location) {
     const container = document.createElement("div");
@@ -37,7 +37,7 @@
     if (!group) return;
     group.clearLayers();
     for (const location of lastLocations) {
-      const marker = window.L.marker([location.lat, location.long], { icon: iconFor(location.icon), title: location.name, keyboard: true });
+      const marker = window.L.marker([location.lat, location.long], { icon: iconFor(location), title: location.name, keyboard: true });
       marker.bindPopup(popupFor(location));
       group.addLayer(marker);
     }

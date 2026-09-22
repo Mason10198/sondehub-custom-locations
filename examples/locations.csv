@@ -1,6 +1,6 @@
-name,icon,lat,long
-Home,home,40.7128,-74.0060
-Launch site,launch,"34.0522","-118.2437"
+name,icon,lat,long,icon_color,background_color
+Home,home,40.7128,-74.0060,,
+Launch site,launch,"34.0522","-118.2437",#ffffff,#2563eb
 "Field, west",landing,51.5074,-0.1278
 Receiver,radio,48.8566,2.3522
 Recovery staging,recovery,-33.8688,151.2093

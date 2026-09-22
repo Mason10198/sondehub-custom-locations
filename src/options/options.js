@@ -2,7 +2,7 @@
   "use strict";
   const repository = SondeHubLocationRepository.createRepository(browser.storage.local);
   const form = document.getElementById("location-form");
-  const fields = { id: document.getElementById("location-id"), name: document.getElementById("name"), icon: document.getElementById("icon"), lat: document.getElementById("lat"), long: document.getElementById("long") };
+  const fields = { id: document.getElementById("location-id"), name: document.getElementById("name"), icon: document.getElementById("icon"), iconColor: document.getElementById("icon-color"), backgroundColor: document.getElementById("background-color"), lat: document.getElementById("lat"), long: document.getElementById("long") };
   const list = document.getElementById("locations");
   const message = document.getElementById("form-message");
   const report = document.getElementById("import-report");
@@ -21,7 +21,10 @@
   }
   function renderIconPreview() {
     const icon = SondeHubIcons.iconFor(fields.icon.value);
-    document.getElementById("icon-preview-image").replaceChildren(svgNode(icon));
+    const preview = document.getElementById("icon-preview-image");
+    preview.style.setProperty("--marker-icon-color", fields.iconColor.value);
+    preview.style.setProperty("--marker-background-color", fields.backgroundColor.value);
+    preview.replaceChildren(svgNode(icon));
     document.getElementById("icon-preview-label").textContent = `${icon.label} — ${icon.styleLabel}`;
   }
   function renderIconResults() {
@@ -69,12 +72,14 @@
   function resetForm() {
     form.reset();
     fields.id.value = "";
+    fields.iconColor.value = SondeHubLocations.DEFAULT_ICON_COLOR;
+    fields.backgroundColor.value = SondeHubLocations.DEFAULT_BACKGROUND_COLOR;
     clearIconSearch();
     selectIcon(SondeHubLocations.DEFAULT_ICON);
     iconResultsPanel.open = false;
     document.getElementById("cancel-edit").hidden = true;
   }
-  function locationFromForm() { return { id: fields.id.value, name: fields.name.value, icon: SondeHubIcons.normalizeIcon(fields.icon.value), lat: fields.lat.value, long: fields.long.value }; }
+  function locationFromForm() { return { id: fields.id.value, name: fields.name.value, icon: SondeHubIcons.normalizeIcon(fields.icon.value), iconColor: fields.iconColor.value, backgroundColor: fields.backgroundColor.value, lat: fields.lat.value, long: fields.long.value }; }
   async function render() {
     try {
       const locations = await repository.getAll();
@@ -85,8 +90,9 @@
         const details = document.createElement("div");
         const icon = SondeHubIcons.iconFor(location.icon);
         const name = document.createElement("strong"); name.textContent = `${icon.label}: ${location.name}`;
+        const colors = document.createElement("span"); colors.className = "location-colors"; colors.title = `Icon ${location.iconColor}; background ${location.backgroundColor}`; colors.style.setProperty("--marker-icon-color", location.iconColor); colors.style.setProperty("--marker-background-color", location.backgroundColor);
         const coords = document.createElement("p"); coords.textContent = `${location.lat}, ${location.long}`;
-        details.append(name, coords);
+        details.append(name, colors, coords);
         const actions = document.createElement("div"); actions.className = "row-actions";
         const edit = document.createElement("button"); edit.type = "button"; edit.textContent = "Edit";
         edit.addEventListener("click", () => {
@@ -120,6 +126,8 @@
   });
   document.getElementById("clear-icon-search").addEventListener("click", () => { clearIconSearch(); iconSearch.focus(); });
   document.getElementById("reset-icon").addEventListener("click", () => selectIcon(SondeHubLocations.DEFAULT_ICON));
+  for (const colorField of [fields.iconColor, fields.backgroundColor]) colorField.addEventListener("input", renderIconPreview);
+  document.getElementById("reset-colors").addEventListener("click", () => { fields.iconColor.value = SondeHubLocations.DEFAULT_ICON_COLOR; fields.backgroundColor.value = SondeHubLocations.DEFAULT_BACKGROUND_COLOR; renderIconPreview(); });
   resetForm();
   form.addEventListener("submit", async (event) => {
     event.preventDefault();

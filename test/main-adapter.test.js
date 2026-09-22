@@ -55,11 +55,13 @@ test("registers a late Leaflet layer control once without retrying marker render
   assert.equal(adapter.group.map, adapter.window.map);
   assert.equal(adapter.intervals.length, 1);
 
-  const message = protocol.serialize([{ id: "home", name: "Home", icon: "pin", lat: 1, long: 2 }]);
+  const message = protocol.serialize([{ id: "home", name: "Home", icon: "pin", iconColor: "#ffffff", backgroundColor: "#2563eb", lat: 1, long: 2 }]);
   adapter.listeners.get("sondehub-custom-locations:update")({ detail: message });
   assert.equal(adapter.group.markers.length, 1);
   assert.match(adapter.group.markers[0].options.icon.html, /<svg/);
   assert.match(adapter.group.markers[0].options.icon.html, /<path/);
+  assert.match(adapter.group.markers[0].options.icon.html, /background:#2563eb;color:#ffffff/);
+  assert.match(adapter.group.markers[0].options.icon.html, /border:2px solid #ffffff/);
   const rendersBeforeControl = adapter.group.clearCount;
   adapter.intervals[0]();
   assert.equal(adapter.group.clearCount, rendersBeforeControl);

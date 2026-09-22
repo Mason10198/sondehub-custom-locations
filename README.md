@@ -6,7 +6,7 @@ This is an independent community project. It is not affiliated with, sponsored b
 
 - **Firefox desktop:** 140 or newer
 - **Firefox for Android:** 142 or newer
-- **Current release:** 1.1.0
+- **Current release:** 1.2.0
 - **License:** MIT
 - **Status:** source and unsigned builds are available; persistent installation requires Mozilla signing
 
@@ -33,7 +33,8 @@ The extension has no backend, account, analytics, telemetry, or extension-origin
 - Runs only on `tracker.sondehub.org`, `sondehub.org`, and `amateur.sondehub.org`.
 - Adds markers in a separate Leaflet overlay named **Custom locations**.
 - Adds, edits, and deletes browser-local locations from a responsive options page.
-- Imports CSV files with `name,icon,lat,long` columns in **add** or **replace all** mode.
+- Lets each marker use a custom icon color and background color, defaulting to black on yellow.
+- Imports CSV files with required `name,icon,lat,long` columns and optional color columns in **add** or **replace all** mode.
 - Reports skipped CSV rows with their source row number and validation error.
 - Updates open SondeHub tabs immediately when locations change.
 - Includes all 316 optimized Heroicons v2.2.0 Micro SVGs.
@@ -78,7 +79,7 @@ This launches a disposable Firefox development profile and is also temporary.
 ## Use the extension
 
 1. Open the extension's **Preferences** page from `about:addons`.
-2. Enter a location name, choose an icon, and enter decimal latitude and longitude.
+2. Enter a location name, choose an icon, optionally choose its icon and background colors, and enter decimal latitude and longitude.
 3. Select **Save location**.
 4. Open or return to a supported SondeHub map.
 5. Enable **Custom locations** in the map's layer control if it is not already visible.
@@ -97,10 +98,10 @@ name,icon,lat,long
 Example:
 
 ```csv
-name,icon,lat,long
-Home,home,40.7128,-74.0060
-Launch site,24-solid/rocket-launch,34.0522,-118.2437
-"Field, west",landing,51.5074,-0.1278
+name,icon,lat,long,icon_color,background_color
+Home,home,40.7128,-74.0060,,
+Launch site,rocket-launch,34.0522,-118.2437,#ffffff,#2563eb
+"Field, west",landing,51.5074,-0.1278,#000000,#facc15
 ```
 
 A complete sample is available at [`examples/locations.csv`](examples/locations.csv).
@@ -109,7 +110,7 @@ Import behavior:
 
 - **Add:** appends valid imported locations to the saved list.
 - **Replace all:** replaces the saved list with valid imported locations.
-- Header names are case-insensitive. The required columns are `name`, `icon`, `lat`, and `long`; extra columns are ignored.
+- Header names are case-insensitive. The required columns are `name`, `icon`, `lat`, and `long`; `icon_color` and `background_color` are optional, and other extra columns are ignored.
 - Invalid rows are skipped and reported; valid rows in the same file still import.
 - Latitude must be from `-90` to `90`; longitude must be from `-180` to `180`.
 - Names are trimmed, required, and limited to 120 characters.
@@ -118,6 +119,9 @@ Import behavior:
 - Canonical icon keys use `16-solid/name`, such as `16-solid/map-pin` or `16-solid/home`.
 - Legacy keys such as `pin`, `home`, `launch`, `landing`, and `radio` remain supported.
 - Missing or unknown icon values use the default Map pin.
+- Colors must be six-digit hexadecimal values such as `#ffffff` or `#2563eb`.
+- Missing or blank colors use the defaults: black icon (`#000000`) and yellow background (`#facc15`).
+- Rows containing a nonblank invalid color are skipped and reported.
 - There is currently no CSV export function. Keep the source CSV separately if it is your backup.
 
 ## Build and verify
@@ -137,7 +141,7 @@ npm test
 npm run lint
 npm run package
 npm run verify:package
-python3 -m zipfile -t dist/sondehub-custom-locations-1.1.0.xpi
+python3 -m zipfile -t dist/sondehub-custom-locations-1.2.0.xpi
 npx --yes web-ext@latest lint --source-dir . \
   --ignore-files scripts/package.py scripts/verify-package.py
 ```
@@ -243,7 +247,8 @@ On a real device, verify:
 
 ### CSV import fails or skips rows
 
-- Confirm the file includes `name,icon,lat,long` headers.
+- Confirm the file includes `name,icon,lat,long` headers. Optional colors use `icon_color,background_color`.
+- Confirm any supplied colors are six-digit hexadecimal values beginning with `#`.
 - Check latitude and longitude ranges and the 120-character name limit.
 - Review the options-page skipped-row report; valid rows still import unless the CSV header or quoting is fatally invalid.
 - Remember that **Replace all** intentionally replaces the existing saved list with the valid imported rows.

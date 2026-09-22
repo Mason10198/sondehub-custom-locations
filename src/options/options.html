@@ -32,6 +32,14 @@
           </details>
           <button id="reset-icon" class="secondary" type="button">Reset icon to Map pin</button>
         </fieldset>
+        <fieldset class="color-picker">
+          <legend>Marker colors</legend>
+          <div class="colors">
+            <label>Icon color <input id="icon-color" type="color" value="#000000"></label>
+            <label>Background color <input id="background-color" type="color" value="#facc15"></label>
+          </div>
+          <button id="reset-colors" class="secondary" type="button">Reset colors</button>
+        </fieldset>
         <div class="coordinates"><label>Latitude <input id="lat" required inputmode="decimal" placeholder="-90 to 90"></label><label>Longitude <input id="long" required inputmode="decimal" placeholder="-180 to 180"></label></div>
         <div class="actions"><button type="submit">Save location</button><button id="cancel-edit" type="button" hidden>Cancel edit</button></div>
       </form>
@@ -39,7 +47,7 @@
     </section>
     <section class="card" aria-labelledby="import-title">
       <h2 id="import-title">Import CSV</h2>
-      <p>Required columns: <code>name,icon,lat,long</code>. Quoted fields and commas in names are supported.</p>
+      <p>Required columns: <code>name,icon,lat,long</code>. Optional color columns: <code>icon_color,background_color</code>. Colors use six-digit hex values such as <code>#000000</code>.</p>
       <input id="csv-file" type="file" accept=".csv,text/csv">
       <fieldset><legend>Import mode</legend><label><input type="radio" name="import-mode" value="add" checked> Add to existing</label><label><input type="radio" name="import-mode" value="replace"> Replace all existing</label></fieldset>
       <button id="import-button" type="button">Import CSV</button>
