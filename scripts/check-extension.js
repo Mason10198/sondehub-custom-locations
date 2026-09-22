@@ -15,7 +15,7 @@ for (const script of requiredOptionsScripts) {
   if (offset <= previousScriptOffset) failures.push(`options scripts must load ${requiredOptionsScripts.join(", ")} in order`);
   previousScriptOffset = offset;
 }
-if (!optionsHtml.includes('id="icon-search"') || !optionsHtml.includes('id="icon-style"') || !optionsHtml.includes('id="icon-results"') || optionsHtml.includes('<select id="icon" ')) failures.push("options must provide the complete searchable Heroicons picker with a style filter instead of a native icon select");
+if (!optionsHtml.includes('id="icon-search"') || !optionsHtml.includes('id="icon-results"') || optionsHtml.includes('id="icon-style"') || optionsHtml.includes('<select id="icon" ')) failures.push("options must provide the searchable Heroicons Micro picker without a style selector or native icon select");
 if (!optionsHtml.includes('href="https://heroicons.com/" target="_blank" rel="noopener noreferrer"')) failures.push("options must link safely to the official Heroicons site");
 if (manifest.manifest_version !== 3) failures.push("manifest_version must be 3");
 if (!Array.isArray(manifest.permissions) || !manifest.permissions.includes("storage")) failures.push("storage permission is required");
@@ -29,12 +29,14 @@ for (const script of manifest.content_scripts || []) {
 }
 try { execFileSync(process.execPath, [path.join(root, "scripts/generate-icon-catalog.js"), "--check"], { stdio: "pipe" }); }
 catch (error) { failures.push(`generated icon catalog: ${error.stderr.toString().trim() || error.message}`); }
-const files = ["src/shared/icons.js", "src/shared/locations.js", "src/shared/protocol.js", "src/shared/storage.js", "src/content/main-adapter.js", "src/content/storage-bridge.js", "src/options/options.js", "scripts/generate-icon-catalog.js"];
+try { execFileSync(process.execPath, [path.join(root, "scripts/verify-vendored-assets.js")], { stdio: "pipe" }); }
+catch (error) { failures.push(`vendored asset provenance: ${error.stderr.toString().trim() || error.message}`); }
+const files = ["src/shared/icons.js", "src/shared/locations.js", "src/shared/protocol.js", "src/shared/storage.js", "src/content/main-adapter.js", "src/content/storage-bridge.js", "src/options/options.js", "scripts/generate-icon-catalog.js", "scripts/verify-vendored-assets.js"];
 for (const file of files) {
   try { execFileSync(process.execPath, ["--check", path.join(root, file)], { stdio: "pipe" }); }
   catch (error) { failures.push(`${file}: ${error.stderr.toString().trim()}`); }
 }
-for (const asset of ["THIRD_PARTY_NOTICES.md", "third_party/heroicons/LICENSE", "third_party/heroicons/optimized/24/outline/map-pin.svg", "third_party/heroicons/optimized/24/solid/map-pin.svg", "third_party/heroicons/optimized/20/solid/map-pin.svg", "third_party/heroicons/optimized/16/solid/map-pin.svg"]) {
+for (const asset of ["THIRD_PARTY_NOTICES.md", "third_party/heroicons/LICENSE", "third_party/heroicons/optimized/16/solid/map-pin.svg"]) {
   if (!fs.existsSync(path.join(root, asset))) failures.push(`missing packaged third-party asset: ${asset}`);
 }
 if (failures.length) { console.error(failures.join("\n")); process.exit(1); }

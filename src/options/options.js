@@ -7,7 +7,6 @@
   const message = document.getElementById("form-message");
   const report = document.getElementById("import-report");
   const iconSearch = document.getElementById("icon-search");
-  const iconStyle = document.getElementById("icon-style");
   const iconResults = document.getElementById("icon-results");
   const iconResultsPanel = document.getElementById("icon-results-panel");
   const iconResultsStatus = document.getElementById("icon-results-status");
@@ -25,12 +24,9 @@
     document.getElementById("icon-preview-image").replaceChildren(svgNode(icon));
     document.getElementById("icon-preview-label").textContent = `${icon.label} — ${icon.styleLabel}`;
   }
-  function selectedStyleLabel() {
-    return SondeHubIcons.STYLES.find((style) => style.key === iconStyle.value)?.label || "all styles";
-  }
   function renderIconResults() {
     const selectedCanonicalKey = SondeHubIcons.canonicalIconKey(fields.icon.value);
-    const matchingIcons = SondeHubIcons.filterIcons(iconSearch.value, iconStyle.value);
+    const matchingIcons = SondeHubIcons.filterIcons(iconSearch.value);
     const visibleIcons = matchingIcons.slice(0, MAX_VISIBLE_ICON_RESULTS);
     iconResults.replaceChildren();
     for (const icon of visibleIcons) {
@@ -38,7 +34,7 @@
       button.type = "button";
       button.className = "icon-option";
       button.setAttribute("aria-pressed", String(icon.key === selectedCanonicalKey));
-      button.setAttribute("aria-label", `Select ${icon.label}, ${icon.styleLabel}`);
+      button.setAttribute("aria-label", `Select ${icon.label}`);
       const image = document.createElement("span");
       image.className = "icon-option-image";
       image.setAttribute("aria-hidden", "true");
@@ -46,28 +42,23 @@
       const label = document.createElement("span");
       label.className = "icon-option-label";
       label.textContent = icon.label;
-      const style = document.createElement("small");
-      style.className = "icon-option-style";
-      style.textContent = icon.styleLabel;
       const text = document.createElement("span");
       text.className = "icon-option-text";
-      text.append(label, style);
+      text.append(label);
       button.append(image, text);
       button.addEventListener("click", () => {
-        selectIcon(icon.key, true);
+        selectIcon(icon.key);
         iconResultsPanel.open = false;
         iconResultsPanel.querySelector("summary").focus();
       });
       iconResults.append(button);
     }
     const shown = visibleIcons.length === matchingIcons.length ? `${matchingIcons.length}` : `${visibleIcons.length} of ${matchingIcons.length}`;
-    iconResultsStatus.textContent = `Showing ${shown} matching icon${matchingIcons.length === 1 ? "" : "s"} from ${SondeHubIcons.ICONS.length} Heroicons (${selectedStyleLabel()}).${matchingIcons.length > MAX_VISIBLE_ICON_RESULTS ? " Refine the search or choose a style to see more." : ""}`;
+    iconResultsStatus.textContent = `Showing ${shown} matching icon${matchingIcons.length === 1 ? "" : "s"} from ${SondeHubIcons.ICONS.length} Heroicons Micro icons.${matchingIcons.length > MAX_VISIBLE_ICON_RESULTS ? " Refine the search to see more." : ""}`;
     iconEmpty.hidden = matchingIcons.length !== 0;
   }
-  function selectIcon(icon, alignStyle) {
+  function selectIcon(icon) {
     fields.icon.value = SondeHubIcons.normalizeIcon(icon);
-    const selected = SondeHubIcons.iconFor(fields.icon.value);
-    if (alignStyle) iconStyle.value = selected.style;
     renderIconPreview();
     renderIconResults();
   }
@@ -78,9 +69,8 @@
   function resetForm() {
     form.reset();
     fields.id.value = "";
-    iconStyle.value = "";
     clearIconSearch();
-    selectIcon(SondeHubLocations.DEFAULT_ICON, false);
+    selectIcon(SondeHubLocations.DEFAULT_ICON);
     iconResultsPanel.open = false;
     document.getElementById("cancel-edit").hidden = true;
   }
@@ -94,7 +84,7 @@
         const item = document.createElement("li");
         const details = document.createElement("div");
         const icon = SondeHubIcons.iconFor(location.icon);
-        const name = document.createElement("strong"); name.textContent = `${icon.label} (${icon.styleLabel}): ${location.name}`;
+        const name = document.createElement("strong"); name.textContent = `${icon.label}: ${location.name}`;
         const coords = document.createElement("p"); coords.textContent = `${location.lat}, ${location.long}`;
         details.append(name, coords);
         const actions = document.createElement("div"); actions.className = "row-actions";
@@ -102,7 +92,7 @@
         edit.addEventListener("click", () => {
           Object.entries(location).forEach(([key, value]) => { fields[key].value = value; });
           clearIconSearch();
-          selectIcon(fields.icon.value, true);
+          selectIcon(fields.icon.value);
           document.getElementById("cancel-edit").hidden = false;
           fields.name.focus();
           window.scrollTo({ top: 0, behavior: "smooth" });
@@ -122,14 +112,14 @@
 
   iconSearch.addEventListener("focus", () => { iconResultsPanel.open = true; });
   iconSearch.addEventListener("input", () => { iconResultsPanel.open = true; renderIconResults(); });
-  iconStyle.addEventListener("change", () => { iconResultsPanel.open = true; renderIconResults(); });
+
   iconSearch.addEventListener("keydown", (event) => {
     if (event.key !== "Enter") return;
     event.preventDefault();
     iconResults.querySelector("button")?.focus();
   });
   document.getElementById("clear-icon-search").addEventListener("click", () => { clearIconSearch(); iconSearch.focus(); });
-  document.getElementById("reset-icon").addEventListener("click", () => selectIcon(SondeHubLocations.DEFAULT_ICON, true));
+  document.getElementById("reset-icon").addEventListener("click", () => selectIcon(SondeHubLocations.DEFAULT_ICON));
   resetForm();
   form.addEventListener("submit", async (event) => {
     event.preventDefault();

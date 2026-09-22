@@ -12,14 +12,14 @@ test("protocol serializes minimal display snapshots for cross-world transport", 
   ]);
   assert.equal(typeof text, "string");
   const locations = protocol.message(text);
-  assert.deepEqual(locations, [{ name: "Home", icon: "24-outline/star", lat: 1.5, long: 2.5 }]);
+  assert.deepEqual(locations, [{ name: "Home", icon: "16-solid/star", lat: 1.5, long: 2.5 }]);
   assert.equal(Object.isFrozen(locations), true);
   assert.equal(Object.isFrozen(locations[0]), true);
   assert.equal(Object.hasOwn(locations[0], "id"), false);
 });
 
 test("protocol rejects malformed, oversized, and out-of-schema text transport", () => {
-  const validLocation = { name: "A", icon: "24-outline/map-pin", lat: 1, long: 2 };
+  const validLocation = { name: "A", icon: "16-solid/map-pin", lat: 1, long: 2 };
   assert.equal(protocol.message("not JSON"), null);
   assert.equal(protocol.message("x".repeat(protocol.MAX_TRANSPORT_CHARS + 1)), null);
   assert.equal(protocol.message(JSON.stringify({ version: 2, locations: [validLocation] })), null);

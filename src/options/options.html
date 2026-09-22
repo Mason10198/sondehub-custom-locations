@@ -16,27 +16,19 @@
         <label>Name <input id="name" required maxlength="120" autocomplete="off"></label>
         <fieldset class="icon-picker" aria-describedby="icon-picker-help">
           <legend>Icon</legend>
-          <input id="icon" name="icon" type="hidden" value="24-outline/map-pin">
+          <input id="icon" name="icon" type="hidden" value="16-solid/map-pin">
           <div class="icon-preview" id="icon-preview" role="status" aria-live="polite"><span id="icon-preview-image" aria-hidden="true"></span><span id="icon-preview-label"></span></div>
           <div class="icon-search-controls">
             <label for="icon-search">Search Heroicons</label>
             <input id="icon-search" type="search" autocomplete="off" aria-controls="icon-results" aria-describedby="icon-results-status" placeholder="e.g. radio, map pin, cloud">
-            <label for="icon-style">Style</label>
-            <select id="icon-style" aria-controls="icon-results">
-              <option value="">All styles</option>
-              <option value="24-outline">24px Outline</option>
-              <option value="24-solid">24px Solid</option>
-              <option value="20-solid">20px Solid</option>
-              <option value="16-solid">16px Solid</option>
-            </select>
             <button id="clear-icon-search" type="button">Clear search</button>
           </div>
-          <p id="icon-picker-help" class="muted">Search all vendored Heroicons v2.2.0 variants. <a href="https://heroicons.com/" target="_blank" rel="noopener noreferrer">Browse Heroicons on the official site</a> for full-screen browsing.</p>
+          <p id="icon-picker-help" class="muted">Search the vendored Heroicons v2.2.0 Micro set. <a href="https://heroicons.com/" target="_blank" rel="noopener noreferrer">Browse Heroicons on the official site</a> for full-screen browsing.</p>
           <p id="icon-results-status" class="icon-results-status" role="status" aria-live="polite"></p>
           <details id="icon-results-panel" class="icon-results-panel">
             <summary>Choose an icon</summary>
             <div id="icon-results" class="icon-results" role="group" aria-label="Heroicons search results"></div>
-            <p id="icon-empty" class="muted" hidden>No Heroicons match this search and style.</p>
+            <p id="icon-empty" class="muted" hidden>No Heroicons Micro icon matches this search.</p>
           </details>
           <button id="reset-icon" class="secondary" type="button">Reset icon to Map pin</button>
         </fieldset>
