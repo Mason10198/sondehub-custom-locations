@@ -28,7 +28,7 @@ test("storage bridge pushes minimal snapshots and ignores page request events", 
   assert.equal(listeners.has("sondehub-custom-locations:request"), false);
   assert.equal(typeof events[0].detail, "string");
   const locations = protocol.message(events[0].detail);
-  assert.deepEqual(locations, [{ name: "Home", icon: "pin", lat: 1, long: 2 }]);
+  assert.deepEqual(locations, [{ name: "Home", icon: "24-outline/map-pin", lat: 1, long: 2 }]);
   assert.equal(Object.hasOwn(locations[0], "id"), false);
   // A page can dispatch this name, but the bridge deliberately has no listener.
   assert.equal(listeners.get("sondehub-custom-locations:request"), undefined);

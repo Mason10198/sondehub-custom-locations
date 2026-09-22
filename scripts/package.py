@@ -2,9 +2,11 @@
 """Create a reproducible unsigned WebExtension XPI without dependencies."""
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
+import json
 
 ROOT = Path(__file__).resolve().parent.parent
-OUTPUT = ROOT / "dist" / "sondehub-custom-locations-1.0.0.xpi"
+MANIFEST = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
+OUTPUT = ROOT / "dist" / f"sondehub-custom-locations-{MANIFEST['version']}.xpi"
 INCLUDE = (ROOT / "manifest.json", ROOT / "LICENSE", ROOT / "THIRD_PARTY_NOTICES.md", ROOT / "icons", ROOT / "src", ROOT / "third_party")
 
 files = []

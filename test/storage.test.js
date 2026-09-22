@@ -8,7 +8,7 @@ test("repository saves normalized records and edits by stable ID", async () => {
   const area = memoryStorage(), repo = createRepository(area);
   await repo.save({ id: "one", name: " Home ", icon: "INVALID", lat: "1.25", long: "2.5" });
   await repo.save({ id: "one", name: "Updated", icon: "star", lat: 3, long: 4 });
-  assert.deepEqual(await repo.getAll(), [{ id: "one", name: "Updated", icon: "star", lat: 3, long: 4 }]);
+  assert.deepEqual(await repo.getAll(), [{ id: "one", name: "Updated", icon: "24-outline/star", lat: 3, long: 4 }]);
 });
 test("repository adds, removes, and clears locations", async () => {
   const repo = createRepository(memoryStorage());

@@ -4,9 +4,9 @@ const assert = require("node:assert/strict");
 const api = require("../src/shared/locations.js");
 
 test("normalizes supported icons and defaults invalid values", () => {
-  assert.equal(api.normalizeIcon(" HOME "), "home");
-  assert.equal(api.normalizeIcon("unknown"), "pin");
-  assert.equal(api.normalizeIcon(""), "pin");
+  assert.equal(api.normalizeIcon(" HOME "), "24-outline/home");
+  assert.equal(api.normalizeIcon("unknown"), "24-outline/map-pin");
+  assert.equal(api.normalizeIcon(""), "24-outline/map-pin");
 });
 test("accepts every catalog icon in forms and CSV while defaulting bad icon values", () => {
   assert.ok(api.ICONS.length >= 20);
@@ -14,7 +14,7 @@ test("accepts every catalog icon in forms and CSV while defaulting bad icon valu
     assert.equal(api.validateLocation({ name: icon.key, icon: icon.key, lat: 1, long: 2 }).value.icon, icon.key);
     assert.equal(api.importCsv(`name,icon,lat,long\n${icon.key},${icon.key},1,2`).locations[0].icon, icon.key);
   }
-  assert.equal(api.validateLocation({ name: "Fallback", icon: "", lat: 1, long: 2 }).value.icon, "pin");
+  assert.equal(api.validateLocation({ name: "Fallback", icon: "", lat: 1, long: 2 }).value.icon, "24-outline/map-pin");
 });
 test("validates coordinate bounds and name", () => {
   assert.equal(api.validateLocation({ name: "A", lat: "90", long: "-180", icon: "star" }).ok, true);
@@ -29,7 +29,7 @@ test("rejects characters following a closing CSV quote", () => {
 test("imports valid rows and reports physical invalid row numbers", () => {
   const result = api.importCsv("name,icon,lat,long\nGood,bad,1,2\nBad,pin,99,2\n,home,1,2");
   assert.equal(result.locations.length, 1);
-  assert.equal(result.locations[0].icon, "pin");
+  assert.equal(result.locations[0].icon, "24-outline/map-pin");
   assert.deepEqual(result.skipped, [{ row: 3, reason: "latitude must be a number from -90 to 90" }, { row: 4, reason: "name is required" }]);
 });
 test("accepts a CSV with leading blank lines while retaining physical row numbers", () => {
