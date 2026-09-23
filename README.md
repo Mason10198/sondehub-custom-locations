@@ -1,6 +1,6 @@
 # SondeHub Custom Locations
 
-A privacy-focused Firefox WebExtension that adds persistent personal markers to the public [SondeHub Tracker](https://tracker.sondehub.org/) and [SondeHub Amateur](https://amateur.sondehub.org/) maps.
+A privacy-focused Firefox WebExtension that adds persistent custom markers on the supported SondeHub map hosts: [SondeHub Tracker](https://tracker.sondehub.org/), [sondehub.org](https://sondehub.org/), and [SondeHub Amateur](https://amateur.sondehub.org/).
 
 This is an independent community project. It is not affiliated with, sponsored by, or endorsed by SondeHub.
 
@@ -8,7 +8,7 @@ This is an independent community project. It is not affiliated with, sponsored b
 - **Firefox for Android:** 142 or newer
 - **Current version:** 1.6.4
 - **License:** MIT
-- **Status:** prepared for AMO submission; no Mozilla-signed public release yet
+- **Status:** source and unsigned review artifacts are prepared for AMO submission; no Mozilla-signed release is available yet
 
 [![CI](https://github.com/Mason10198/sondehub-custom-locations/actions/workflows/ci.yml/badge.svg)](https://github.com/Mason10198/sondehub-custom-locations/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -41,6 +41,8 @@ The extension has no project-operated backend, account, analytics, telemetry, re
 - Synchronizes locations between desktop Firefox profiles signed in to the same Firefox account with extension syncing enabled.
 - Exports and imports portable CSV backups on desktop and mobile.
 - Provides synchronized defaults for icon, colors, and circle diameter.
+- Hides marker names by default, reveals them on hover, and provides an **Always show names** preference.
+- Keeps custom locations below SondeHub sondes and chase cars, with a map-native toggle below the time-window selector.
 - Lets individual markers override any appearance setting while inherited markers follow future default changes.
 - Imports CSV files with required `name,lat,long` columns and optional appearance override columns in **add** or **replace all** mode.
 - Reports skipped CSV rows with their source row number and validation error.
@@ -189,7 +191,7 @@ What these commands do:
 The packaging script:
 
 - Reads the version from `manifest.json`.
-- Includes only 15 allowlisted runtime and license files. The 316 source SVGs stay in the repository for provenance checks but are not duplicated in the XPI because the generated local catalog already contains them.
+- Includes only 12 allowlisted runtime and license files. The 316 source SVGs stay in the repository for provenance checks but are not duplicated in the XPI because the generated local catalog already contains them.
 - Refuses symlinks and special files.
 - Sorts archive paths and uses fixed ZIP timestamps for deterministic output.
 - Produces an **unsigned** XPI. Renaming or building an XPI does not sign it.
@@ -217,7 +219,7 @@ The prepared listing and reviewer notes are in [`AMO_LISTING.md`](AMO_LISTING.md
 
 For a Mozilla-signed self-distributed desktop build, open `about:addons`, use the gear menu, choose **Install Add-on From File…**, and select the signed XPI. Standard Firefox Release and Beta do not normally install an unsigned XPI persistently.
 
-The committed Gecko ID is stable and should not change after publishing. The manifest declares `browser_specific_settings.gecko.data_collection_permissions.required: ["none"]` because the developer does not collect or receive user data. Firefox Sync transport is controlled by Firefox and the user's Mozilla account, not by this extension or its developer.
+The committed Gecko ID is stable and should not change after publishing. The manifest declares `browser_specific_settings.gecko.data_collection_permissions.required: ["locationInfo"]` because saved marker coordinates can be transported by Firefox Sync. The developer does not operate that transport or receive synchronized data.
 
 Never commit AMO API credentials, signing keys, browser profiles, or real personal-location exports.
 
@@ -255,7 +257,7 @@ Firefox for Android does not synchronize WebExtension `storage.sync` data. Use *
 On a real device, verify:
 
 1. Options-page add, edit, import, and delete behavior.
-2. Marker rendering and the **Custom locations** layer on each supported SondeHub host.
+2. Marker rendering and the **Markers** toggle on each supported SondeHub host.
 3. Live updates without reloading the map.
 4. Full Firefox restart and storage persistence using the signed persistent installation.
 
@@ -265,7 +267,7 @@ On a real device, verify:
 
 - Confirm the tab is on `tracker.sondehub.org`, `sondehub.org`, or `amateur.sondehub.org`.
 - Wait for the SondeHub Leaflet map to finish loading.
-- Check the map's layer control for **Custom locations**. If the site does not expose a layer selector, the extension still attempts to add its layer directly.
+- Confirm the cyan **Markers** button appears below the time-window selector and is enabled.
 - Open the options page and confirm the location has valid decimal coordinates.
 - Reload the temporary add-on in `about:debugging`, then reload the map tab.
 - The extension stores and renders at most 250 locations. It also checks Firefox Sync's per-item and total byte quotas before writing, so unusually large migrated records or long escaped names may reach the storage limit sooner.
@@ -298,14 +300,14 @@ On a real device, verify:
 
 ## Privacy and permissions
 
-- **API permission:** only `storage`, used for browser-managed desktop sync and local Android storage.
-- **Page access:** one isolated content script matches only `tracker.sondehub.org`, `sondehub.org`, and `amateur.sondehub.org`; no separate `host_permissions` block is requested.
+- **API permission:** `storage`, used for browser-managed desktop sync and local Android storage.
+- **Page access:** one isolated content script matches only `tracker.sondehub.org`, `sondehub.org`, and `amateur.sondehub.org`; the extension does not declare a separate `host_permissions` block.
 - No project backend, developer account system, analytics, telemetry, tracking, cloud database, CDN, external options-page links, remotely loaded resources, or direct extension network requests.
 - On desktop, Firefox itself may transmit extension storage through the user's Firefox Sync account. The extension does not choose the server, hold credentials, or receive the data.
 - Extension pages use a restrictive content security policy with `connect-src 'none'` and local-only scripts and styles.
 - The AMO built-in consent declaration is `locationInfo` because saved coordinates can be transported by Firefox Sync. The developer does not receive that data.
 - Default appearance and location records synchronize through the same browser-managed storage area.
-- Deleting all locations removes location records but preserves the selected default icon, colors, and circle diameter.
+- Deleting all locations removes location records but preserves the selected default icon, colors, circle diameter, and label-visibility preference.
 - Firefox account, profile backup, Sync, clearing, and removal behavior remains controlled by Firefox.
 
 ### Supported-page boundary
@@ -316,7 +318,7 @@ The page can detect, hide, or reposition the generic host and toggle button beca
 
 ## Architecture and repository layout
 
-The extension avoids SondeHub's page JavaScript and uses two isolated components:
+The extension avoids SondeHub's page JavaScript and keeps marker storage and rendering inside Firefox's isolated content-script world:
 
 1. `src/content/map-overlay-host.js` runs in Firefox's isolated content-script world and privately reads validated `browser.storage.sync` records.
 2. It renders markers into a retained closed shadow root mounted in Leaflet's map pane. Panning is inherited directly from that pane, while tile-container zoom transforms are mirrored before paint; no frame-by-frame viewport sampling is required.
@@ -339,14 +341,14 @@ third_party/heroicons/ Pinned Heroicons source and upstream license
 
 ## Limitations
 
-- SondeHub Tracker and Amateur are third-party applications. A change to their map element or XYZ Leaflet tile layout may require a viewport adapter update.
+- The supported SondeHub sites are third-party applications. A change to their map element or XYZ Leaflet tile layout may require an adapter update.
 - Address geocoding is not included; enter decimal coordinates directly.
 - Firefox Sync must be enabled for extensions on each desktop profile. Propagation is asynchronous and requires the same signed extension ID.
 - Firefox for Android does not synchronize WebExtension storage; use CSV backup and restore there.
 - Storage mutations are serialized within one extension context and single-marker changes write only that marker's Sync record. Concurrent edits to the same marker on different desktops can still resolve by Firefox Sync's conflict behavior.
 - Locations imported without appearance overrides and locations saved without enabled overrides inherit the synchronized defaults. Imported nonblank appearance values and enabled editor overrides remain fixed.
 - During migration, legacy Map pin and black-on-yellow values become inherited; legacy nondefault appearance values remain overrides.
-- The extension stores and renders at most 250 locations, checks Firefox Sync's per-item and total byte quotas before each write, and bounds page-world and Leaflet work.
+- The extension stores and renders at most 250 locations, checks Firefox Sync's per-item and total byte quotas before each write, and bounds DOM and Leaflet work.
 - Firefox for iOS does not run Firefox WebExtensions. Supporting iPhone or iPad would require a separate Safari Web Extension and Xcode application.
 
 ## Contributing and security

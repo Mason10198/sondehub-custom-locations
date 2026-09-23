@@ -2,7 +2,7 @@
   "name": "sondehub-custom-locations",
   "version": "1.6.4",
   "private": true,
-  "description": "Firefox WebExtension for custom SondeHub Tracker map locations",
+  "description": "Firefox WebExtension for custom markers on supported SondeHub maps",
   "type": "commonjs",
   "author": "Mason Nelson",
   "homepage": "https://github.com/Mason10198/sondehub-custom-locations#readme",

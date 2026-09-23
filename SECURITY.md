@@ -17,7 +17,7 @@ Saved marker names, icon keys, colors, circle diameters, and coordinates remain 
 Expected invariants include:
 
 - No project backend, analytics, telemetry, or direct extension network requests. Desktop synchronization is performed only by Firefox Sync under the user's Firefox account.
-- Only the documented `storage` API permission and static content-script matches for the three exact SondeHub hosts; no separate `host_permissions` declaration.
+- The documented `storage` API permission and static content-script access only on the three exact SondeHub hosts; no separate `host_permissions` declaration.
 - No MAIN-world script, page-DOM event, page-readable marker node, or storage-to-page data bridge.
 - No cross-realm message bridge; the isolated layer reads storage and renders directly into its retained closed shadow root.
 - User text rendered with DOM text APIs rather than HTML.

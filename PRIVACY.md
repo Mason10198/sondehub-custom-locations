@@ -20,11 +20,13 @@ The isolated content script reads page-visible tile geometry only to anchor the 
 
 ## Permissions
 
-The only extension API permission is `storage`. Content scripts run only on:
+The extension requests the `storage` API permission. Content scripts run only on:
 
 - `https://tracker.sondehub.org/*`
 - `https://sondehub.org/*`
 - `https://amateur.sondehub.org/*`
+
+The extension does not declare a separate `host_permissions` block.
 
 Extension pages use a content security policy that blocks network connections and remote resources.
 

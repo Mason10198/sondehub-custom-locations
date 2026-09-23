@@ -39,7 +39,7 @@ dist/sondehub-custom-locations-1.6.4.xpi
 - The vendored Heroicons revision, license, tree hash, and upstream links are recorded in `THIRD_PARTY_NOTICES.md`.
 - `npm run verify:vendor` verifies the complete vendored tree and license.
 - `npm run generate:icons` regenerates the runtime catalog deterministically.
-- `scripts/package.py` packages an exact 15-file runtime allowlist with fixed ZIP metadata.
+- `scripts/package.py` packages an exact 12-file runtime allowlist with fixed ZIP metadata.
 - `npm run verify:package` builds twice, compares hashes, checks ZIP integrity, rejects duplicate or unexpected paths, and compares packaged bytes with source bytes.
 
 No minifier, transpiler, bundler, native compiler, or remote build service is used.

@@ -22,7 +22,7 @@ This checklist prepares a source commit and unsigned XPI for Mozilla review. Moz
    git diff --check
    ```
 
-4. Record the XPI and source-archive SHA-256 values. Confirm the XPI contains only the 15 allowlisted runtime and license files.
+4. Record the XPI and source-archive SHA-256 values. Confirm the XPI contains only the 12 allowlisted runtime and license files.
 5. Test the packaged extension in a clean desktop Firefox profile, including the options page at a narrow viewport and marker rendering on each supported host.
 6. Test the packaged extension on a physical Firefox for Android device, including options-page CRUD, CSV import/export, marker rendering, narrow layouts, and a full browser restart after signed installation.
 7. Confirm the repository contains no credentials, browser profiles, personal coordinates, exported user data, or signed artifacts.
@@ -44,7 +44,7 @@ This checklist prepares a source commit and unsigned XPI for Mozilla review. Moz
 - Use the stable Gecko ID already committed in `manifest.json`.
 - Declare required `locationInfo` for Firefox's built-in consent because saved coordinates can be transported by browser-managed Sync. State that the developer does not receive synchronized data.
 - Link to the public [`PRIVACY.md`](PRIVACY.md) URL after the repository is public.
-- State that the only API permission is `storage` and explain that it stores and synchronizes marker settings.
+- State that the API permission is `storage`, explain that it stores and synchronizes marker settings, and disclose content-script access on the three supported SondeHub hosts.
 - Provide clear desktop and mobile screenshots of the options page and a supported SondeHub map.
 - Select the supported desktop and Android Firefox versions declared in the manifest.
 - Use the prepared public listing and reviewer text in [`AMO_LISTING.md`](AMO_LISTING.md).
