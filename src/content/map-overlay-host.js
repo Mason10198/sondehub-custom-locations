@@ -8,7 +8,7 @@
   const HOST_ID = "sondehub-custom-locations-private-layer";
   const TOGGLE_ID = "sondehub-custom-locations-toggle";
   const MAX_LOCATIONS = 250;
-  const MIN_LABEL_ZOOM = 8;
+
   const MOUNT_POLL_MS = 500;
 
   function transformParts(value) {
@@ -125,6 +125,7 @@
     let toggle = null;
     let anchor = null;
     let locations = [];
+    let settings = { showLabels: false };
     let visible = true;
     let mountTimer = null;
     let observer = null;
@@ -133,7 +134,7 @@
     function createShadow() {
       shadow = host.attachShadow({ mode: "closed" });
       const style = doc.createElement("style");
-      style.textContent = `:host{all:initial;position:absolute!important;left:0!important;top:0!important;width:0!important;height:0!important;overflow:visible!important;pointer-events:none!important;z-index:1000!important}.markers{position:absolute;left:0;top:0;width:0;height:0;overflow:visible;pointer-events:none}.marker{position:absolute;left:0;top:0;display:grid;place-items:center;box-sizing:border-box;border:2px solid var(--marker-color);border-radius:50%;background:var(--marker-background);color:var(--marker-color);box-shadow:0 1px 3px #0008;will-change:transform;contain:layout style}.marker svg{display:block;width:var(--glyph-size);height:var(--glyph-size)}.label{position:absolute;left:50%;top:calc(100% + 4px);max-width:180px;padding:2px 5px;overflow:hidden;border-radius:3px;background:rgb(17 24 39 / 88%);color:#fff;font:600 11px/1.25 system-ui,sans-serif;text-overflow:ellipsis;text-shadow:0 1px 1px #000;white-space:nowrap;transform:translateX(-50%)}.labels-hidden .label{display:none}`;
+      style.textContent = `:host{all:initial;position:absolute!important;left:0!important;top:0!important;width:0!important;height:0!important;overflow:visible!important;pointer-events:none!important;z-index:1000!important}.markers{position:absolute;left:0;top:0;width:0;height:0;overflow:visible;pointer-events:none}.marker{position:absolute;left:0;top:0;display:grid;place-items:center;box-sizing:border-box;border:2px solid var(--marker-color);border-radius:50%;outline:none;background:var(--marker-background);color:var(--marker-color);box-shadow:0 1px 3px #0008;cursor:pointer;pointer-events:auto;will-change:transform;contain:layout style}.marker:focus-visible{outline:3px solid #fff;outline-offset:2px}.marker svg{display:block;width:var(--glyph-size);height:var(--glyph-size)}.label{position:absolute;left:50%;top:calc(100% + 4px);max-width:180px;padding:2px 5px;overflow:hidden;border-radius:3px;background:rgb(17 24 39 / 88%);color:#fff;font:600 11px/1.25 system-ui,sans-serif;text-overflow:ellipsis;text-shadow:0 1px 1px #000;white-space:nowrap;transform:translateX(-50%);opacity:0;visibility:hidden;pointer-events:none}.labels-always .label,.marker:hover .label,.marker:focus-visible .label,.marker.revealed .label{opacity:1;visibility:visible}`;
       markerRoot = doc.createElement("div");
       markerRoot.className = "markers";
       shadow.append(style, markerRoot);
@@ -147,7 +148,7 @@
 
     function positionMarkers() {
       if (!anchor || !markerRoot) return;
-      markerRoot.classList.toggle("labels-hidden", anchor.zoom < MIN_LABEL_ZOOM);
+      markerRoot.classList.toggle("labels-always", settings.showLabels);
       const markers = markerRoot.children;
       for (let index = 0; index < markers.length; index += 1) {
         const location = locations[index];
@@ -161,6 +162,10 @@
       for (const location of locations.slice(0, MAX_LOCATIONS)) {
         const marker = doc.createElement("div");
         marker.className = "marker";
+        marker.tabIndex = 0;
+        marker.setAttribute("role", "button");
+        marker.setAttribute("aria-label", location.name);
+        marker.setAttribute("aria-expanded", "false");
         marker.style.width = `${location.markerDiameter}px`;
         marker.style.height = `${location.markerDiameter}px`;
         marker.style.setProperty("--marker-color", location.iconColor);
@@ -173,6 +178,22 @@
         label.className = "label";
         label.textContent = location.name;
         marker.append(icon, label);
+        marker.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const reveal = !marker.classList.contains("revealed");
+          for (const other of markerRoot.querySelectorAll(".marker.revealed")) {
+            other.classList.remove("revealed");
+            other.setAttribute("aria-expanded", "false");
+          }
+          marker.classList.toggle("revealed", reveal);
+          marker.setAttribute("aria-expanded", String(reveal));
+          if (!reveal) marker.blur();
+        });
+        marker.addEventListener("keydown", (event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          marker.click();
+        });
         fragment.append(marker);
       }
       markerRoot.replaceChildren(fragment);
@@ -198,7 +219,7 @@
 
     async function loadLocations() {
       try {
-        locations = await repository.getResolved();
+        [locations, settings] = await Promise.all([repository.getResolved(), repository.getSettings()]);
         rebuildMarkers();
       } catch (error) {
         console.warn("SondeHub Custom Locations: unable to read saved locations", error);
@@ -213,7 +234,7 @@
         host = doc.createElement("div");
         host.id = HOST_ID;
         host.className = "leaflet-zoom-animated";
-        host.setAttribute("aria-hidden", "true");
+
         for (const [name, value] of Object.entries({ position: "absolute", left: "0", top: "0", width: "0", height: "0", overflow: "visible", "pointer-events": "none", "z-index": "625" })) host.style.setProperty(name, value, "important");
         createShadow();
         toggle = doc.createElement("button");
@@ -264,5 +285,5 @@
     });
   }
 
-  return Object.freeze({ HOST_ID, TOGGLE_ID, MAX_LOCATIONS, MIN_LABEL_ZOOM, transformParts, tileCoordinates, localPosition, chooseAnchor, worldPixel, projectToAnchor, glyphSize, markerTransform, start });
+  return Object.freeze({ HOST_ID, TOGGLE_ID, MAX_LOCATIONS, transformParts, tileCoordinates, localPosition, chooseAnchor, worldPixel, projectToAnchor, glyphSize, markerTransform, start });
 });

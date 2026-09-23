@@ -34,7 +34,13 @@ test("inherited marker appearance resolves through configurable defaults", () =>
   assert.deepEqual({ icon: inherited.icon, iconColor: inherited.iconColor, backgroundColor: inherited.backgroundColor, markerDiameter: inherited.markerDiameter }, { icon: null, iconColor: null, backgroundColor: null, markerDiameter: null });
   const resolved = api.resolveLocationAppearance(inherited, { icon: "radio", iconColor: "#112233", backgroundColor: "#abcdef", markerDiameter: 42 }).value;
   assert.deepEqual({ icon: resolved.icon, iconColor: resolved.iconColor, backgroundColor: resolved.backgroundColor, markerDiameter: resolved.markerDiameter }, { icon: "16-solid/radio", iconColor: "#112233", backgroundColor: "#abcdef", markerDiameter: 42 });
-  assert.deepEqual(api.validateSettings({ icon: "home", iconColor: "#AABBCC", backgroundColor: "#123456", markerDiameter: "36" }).value, { icon: "16-solid/home", iconColor: "#aabbcc", backgroundColor: "#123456", markerDiameter: 36 });
+  assert.deepEqual(api.validateSettings({ icon: "home", iconColor: "#AABBCC", backgroundColor: "#123456", markerDiameter: "36", showLabels: true }).value, { icon: "16-solid/home", iconColor: "#aabbcc", backgroundColor: "#123456", markerDiameter: 36, showLabels: true });
+});
+
+test("marker labels default to interaction-only and validate an explicit always-show setting", () => {
+  assert.equal(api.validateSettings({}).value.showLabels, false);
+  assert.equal(api.validateSettings({ showLabels: true }).value.showLabels, true);
+  assert.equal(api.validateSettings({ showLabels: "true" }).value.showLabels, false);
 });
 
 test("validates global and per-location marker diameters", () => {
@@ -95,11 +101,11 @@ test("exports portable CSV backups that round-trip overrides and default setting
   const csv = api.exportCsv([
     { id: "one", name: 'Launch, "North"', icon: "radio", iconColor: "#ffffff", backgroundColor: "#2563eb", markerDiameter: 40, lat: 35.5, long: -97.5 },
     { id: "two", name: "Second\nLine", icon: "home", lat: 1, long: 2 }
-  ], { icon: "radio", iconColor: "#112233", backgroundColor: "#abcdef", markerDiameter: 34 });
-  assert.equal(csv.startsWith("name,icon,icon_color,background_color,marker_diameter,lat,long,default_icon,default_icon_color,default_background_color,default_marker_diameter,sondehub_csv_version\r\n"), true);
+  ], { icon: "radio", iconColor: "#112233", backgroundColor: "#abcdef", markerDiameter: 34, showLabels: true });
+  assert.equal(csv.startsWith("name,icon,icon_color,background_color,marker_diameter,lat,long,default_icon,default_icon_color,default_background_color,default_marker_diameter,show_labels,sondehub_csv_version\r\n"), true);
   const imported = api.importCsv(csv);
   assert.equal(imported.skipped.length, 0);
-  assert.deepEqual(imported.settings, { icon: "16-solid/radio", iconColor: "#112233", backgroundColor: "#abcdef", markerDiameter: 34 });
+  assert.deepEqual(imported.settings, { icon: "16-solid/radio", iconColor: "#112233", backgroundColor: "#abcdef", markerDiameter: 34, showLabels: true });
   assert.deepEqual(imported.locations.map(({ id, ...location }) => location), [
     { name: 'Launch, "North"', icon: "16-solid/radio", iconColor: "#ffffff", backgroundColor: "#2563eb", markerDiameter: 40, lat: 35.5, long: -97.5 },
     { name: "Second\nLine", icon: "16-solid/home", iconColor: null, backgroundColor: null, markerDiameter: null, lat: 1, long: 2 }
@@ -107,11 +113,11 @@ test("exports portable CSV backups that round-trip overrides and default setting
 });
 
 test("empty CSV backups still round-trip default settings", () => {
-  const csv = api.exportCsv([], { icon: "home", iconColor: "#112233", backgroundColor: "#abcdef", markerDiameter: 48 });
+  const csv = api.exportCsv([], { icon: "home", iconColor: "#112233", backgroundColor: "#abcdef", markerDiameter: 48, showLabels: false });
   const imported = api.importCsv(csv);
   assert.deepEqual(imported.locations, []);
   assert.deepEqual(imported.skipped, []);
-  assert.deepEqual(imported.settings, { icon: "16-solid/home", iconColor: "#112233", backgroundColor: "#abcdef", markerDiameter: 48 });
+  assert.deepEqual(imported.settings, { icon: "16-solid/home", iconColor: "#112233", backgroundColor: "#abcdef", markerDiameter: 48, showLabels: false });
 });
 
 test("imports version 2 and 3 backups with the legacy marker diameter", () => {
@@ -133,7 +139,13 @@ test("imports version 1 minimal CSV and version 4 diameter metadata", () => {
   const v4 = api.importCsv("name,lat,long,marker_diameter,default_icon,default_icon_color,default_background_color,default_marker_diameter,sondehub_csv_version\nSized,3,4,42,map-pin,#000000,#facc15,36,4");
   assert.equal(v4.skipped.length, 0);
   assert.equal(v4.locations[0].markerDiameter, 42);
-  assert.deepEqual(v4.settings, { icon: "16-solid/map-pin", iconColor: "#000000", backgroundColor: "#facc15", markerDiameter: 36 });
+  assert.deepEqual(v4.settings, { icon: "16-solid/map-pin", iconColor: "#000000", backgroundColor: "#facc15", markerDiameter: 36, showLabels: false });
+});
+
+test("imports version 5 label visibility metadata", () => {
+  const v5 = api.importCsv("name,lat,long,default_icon,default_icon_color,default_background_color,default_marker_diameter,show_labels,sondehub_csv_version\nMarker,1,2,map-pin,#000000,#facc15,22,true,5");
+  assert.equal(v5.skipped.length, 0);
+  assert.equal(v5.settings.showLabels, true);
 });
 
 test("exports spreadsheet-safe names without changing names on re-import", () => {

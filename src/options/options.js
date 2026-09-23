@@ -35,7 +35,8 @@
     icon: document.getElementById("default-icon"),
     iconColor: document.getElementById("default-icon-color"),
     backgroundColor: document.getElementById("default-background-color"),
-    markerDiameter: document.getElementById("default-marker-diameter")
+    markerDiameter: document.getElementById("default-marker-diameter"),
+    showLabels: document.getElementById("show-labels")
   };
   const fields = {
     id: document.getElementById("location-id"),
@@ -56,7 +57,8 @@
     icon: SondeHubLocations.DEFAULT_ICON,
     iconColor: SondeHubLocations.DEFAULT_ICON_COLOR,
     backgroundColor: SondeHubLocations.DEFAULT_BACKGROUND_COLOR,
-    markerDiameter: SondeHubLocations.DEFAULT_MARKER_DIAMETER
+    markerDiameter: SondeHubLocations.DEFAULT_MARKER_DIAMETER,
+    showLabels: SondeHubLocations.DEFAULT_SHOW_LABELS
   };
   let iconTarget = "location";
   let iconReturnFocus = null;
@@ -288,6 +290,7 @@
       defaultFields.iconColor.value = settings.iconColor;
       defaultFields.backgroundColor.value = settings.backgroundColor;
       defaultFields.markerDiameter.value = settings.markerDiameter;
+      defaultFields.showLabels.checked = settings.showLabels;
       renderDefaultPreview();
       syncOverrideControls();
       document.getElementById("count").textContent = `${locations.length} saved`;
@@ -321,7 +324,8 @@
       icon: defaultFields.icon.value,
       iconColor: defaultFields.iconColor.value,
       backgroundColor: defaultFields.backgroundColor.value,
-      markerDiameter: defaultFields.markerDiameter.value
+      markerDiameter: defaultFields.markerDiameter.value,
+      showLabels: defaultFields.showLabels.checked
     });
     if (!checked.ok) { setMessage(defaultsMessage, checked.errors.join("; "), "error"); return; }
     try {

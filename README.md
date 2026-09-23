@@ -101,7 +101,7 @@ This launches a disposable Firefox development profile and is also temporary.
 5. Open or return to a supported SondeHub map.
 6. Use the **Custom markers** button on the map to show or hide the private marker layer.
 
-Marker names appear beside visible markers at closer zoom levels. The overlay is noninteractive so normal map dragging, zooming, and touch gestures continue to pass directly to SondeHub.
+Marker names are hidden by default. Hover a marker, focus it with the keyboard, or tap/click it to reveal the name. Enable **Always show names** under **Marker defaults** to keep every name visible. The rest of the marker layer remains pointer-transparent so normal map dragging, zooming, and touch gestures continue to work.
 
 Editing or deleting a location updates supported SondeHub tabs without a reload. **Delete all** requires confirmation.
 
@@ -146,7 +146,7 @@ Import behavior:
 - Importing an extension-generated backup restores its default appearance as well as its locations.
 - Exported CSV files can be imported on desktop or Android in either add or replace mode.
 - CSV backups intentionally create new internal IDs when imported; display data is preserved.
-- Exports include a `sondehub_csv_version` column and safely prefix spreadsheet-formula-leading names; re-import removes only that export escape and restores the exact name.
+- Exports include a `sondehub_csv_version` column, preserve the **Always show names** setting, and safely prefix spreadsheet-formula-leading names; re-import removes only that export escape and restores the exact name.
 
 ## Build and verify
 

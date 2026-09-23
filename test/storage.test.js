@@ -76,6 +76,13 @@ test("schema 4 reads preserve an explicit marker diameter without rewriting the 
   assert.deepEqual(sync.snapshot()["location:sized"], record);
 });
 
+test("existing settings without label visibility default to interaction-only", async () => {
+  const sync = memoryStorage({ settings: { icon: "16-solid/map-pin", iconColor: "#000000", backgroundColor: "#facc15", markerDiameter: 22 } });
+  const repo = createRepository(sync);
+  assert.equal((await repo.getSettings()).showLabels, false);
+  assert.equal(sync.setCalls().length, 0);
+});
+
 test("repository migrates the legacy single-array sync layout", async () => {
   const sync = memoryStorage({ locations: [{ id: "legacy", name: "Legacy", lat: 1, long: 2 }] });
   const repo = createRepository(sync);
@@ -120,8 +127,8 @@ test("changing defaults updates inherited locations while preserving overrides",
     { id: "inherited", name: "Inherited", lat: 1, long: 2 },
     { id: "override", name: "Override", iconColor: "#ffffff", backgroundColor: "#2563eb", markerDiameter: 46, lat: 3, long: 4 }
   ]);
-  await repo.saveSettings({ icon: "home", iconColor: "#112233", backgroundColor: "#abcdef", markerDiameter: 38 });
-  assert.deepEqual(await repo.getSettings(), { icon: "16-solid/home", iconColor: "#112233", backgroundColor: "#abcdef", markerDiameter: 38 });
+  await repo.saveSettings({ icon: "home", iconColor: "#112233", backgroundColor: "#abcdef", markerDiameter: 38, showLabels: true });
+  assert.deepEqual(await repo.getSettings(), { icon: "16-solid/home", iconColor: "#112233", backgroundColor: "#abcdef", markerDiameter: 38, showLabels: true });
   assert.deepEqual((await repo.getResolved()).map(({ id, icon, iconColor, backgroundColor, markerDiameter }) => ({ id, icon, iconColor, backgroundColor, markerDiameter })), [
     { id: "inherited", icon: "16-solid/home", iconColor: "#112233", backgroundColor: "#abcdef", markerDiameter: 38 },
     { id: "override", icon: "16-solid/home", iconColor: "#ffffff", backgroundColor: "#2563eb", markerDiameter: 46 }

@@ -47,6 +47,7 @@ p { margin: .35rem 0; }
 .setting-label { display: block; font-weight: 650; }
 .color-control, .number-control { display: flex; align-items: center; gap: .55rem; }
 input[type="color"] { width: 3rem; height: 2.35rem; padding: .12rem; border: 1px solid var(--border-strong); border-radius: .45rem; background: Canvas; }
+.switch-control { width: 1.35rem; height: 1.35rem; margin: 0; accent-color: var(--accent); }
 .number-control input { width: 5rem; min-height: 2.4rem; padding: .4rem .5rem; border: 1px solid var(--border-strong); border-radius: .45rem; background: Canvas; color: CanvasText; text-align: right; }
 
 .marker-preview { --marker-diameter: 22px; display: grid; flex: 0 0 var(--marker-diameter); width: var(--marker-diameter); height: var(--marker-diameter); place-items: center; border: 2px solid var(--marker-icon-color, #000); border-radius: 50%; background: var(--marker-background-color, #facc15); color: var(--marker-icon-color, #000); box-shadow: 0 1px 3px #0006; }

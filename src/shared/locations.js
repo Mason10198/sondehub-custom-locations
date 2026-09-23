@@ -14,6 +14,7 @@
   const DEFAULT_MARKER_DIAMETER = 22;
   const MIN_MARKER_DIAMETER = 20;
   const MAX_MARKER_DIAMETER = 64;
+  const DEFAULT_SHOW_LABELS = false;
   const COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 
   function normalizeColor(value, fallback) {
@@ -40,7 +41,8 @@
       icon: normalizeIcon(iconInput),
       iconColor: normalizeColor(iconColorInput, DEFAULT_ICON_COLOR),
       backgroundColor: normalizeColor(backgroundColorInput, DEFAULT_BACKGROUND_COLOR),
-      markerDiameter: markerDiameterFrom(markerDiameterInput, DEFAULT_MARKER_DIAMETER)
+      markerDiameter: markerDiameterFrom(markerDiameterInput, DEFAULT_MARKER_DIAMETER),
+      showLabels: Boolean(input && input.showLabels === true)
     }) };
   }
 
@@ -151,7 +153,7 @@
     if (headerIndex === -1) return { locations: [], skipped: [{ row: 1, reason: "CSV is empty" }] };
     const header = rows[headerIndex].values.map((field) => field.trim().toLowerCase());
     const required = ["name", "lat", "long"];
-    const columns = required.concat(["icon", "icon_color", "background_color", "marker_diameter", "default_icon", "default_icon_color", "default_background_color", "default_marker_diameter", "sondehub_csv_version"]);
+    const columns = required.concat(["icon", "icon_color", "background_color", "marker_diameter", "default_icon", "default_icon_color", "default_background_color", "default_marker_diameter", "show_labels", "sondehub_csv_version"]);
     const indices = Object.fromEntries(columns.map((column) => [column, header.indexOf(column)]));
     const missing = required.filter((column) => indices[column] === -1);
     if (missing.length) return { locations: [], skipped: [{ row: 1, reason: `Missing required column(s): ${missing.join(", ")}` }], fatal: "Invalid CSV header" };
@@ -163,13 +165,14 @@
       if (!row.some((field) => field.trim() !== "")) continue;
       const exportVersion = indices.sondehub_csv_version === -1 ? "" : row[indices.sondehub_csv_version];
       const rawName = row[indices.name];
-      const exportedName = (["1", "2", "3", "4"].includes(exportVersion)) && rawName.startsWith("'") ? rawName.slice(1) : rawName;
-      if (!importedSettings && (["2", "3", "4"].includes(exportVersion)) && indices.default_icon_color !== -1 && indices.default_background_color !== -1) {
+      const exportedName = (["1", "2", "3", "4", "5"].includes(exportVersion)) && rawName.startsWith("'") ? rawName.slice(1) : rawName;
+      if (!importedSettings && (["2", "3", "4", "5"].includes(exportVersion)) && indices.default_icon_color !== -1 && indices.default_background_color !== -1) {
         const checkedSettings = validateSettings({
-          icon: (exportVersion === "3" || exportVersion === "4") && indices.default_icon !== -1 ? row[indices.default_icon] : DEFAULT_ICON,
+          icon: (exportVersion === "3" || exportVersion === "4" || exportVersion === "5") && indices.default_icon !== -1 ? row[indices.default_icon] : DEFAULT_ICON,
           iconColor: row[indices.default_icon_color],
           backgroundColor: row[indices.default_background_color],
-          markerDiameter: exportVersion === "4" && indices.default_marker_diameter !== -1 ? row[indices.default_marker_diameter] : DEFAULT_MARKER_DIAMETER
+          markerDiameter: (exportVersion === "4" || exportVersion === "5") && indices.default_marker_diameter !== -1 ? row[indices.default_marker_diameter] : DEFAULT_MARKER_DIAMETER,
+          showLabels: exportVersion === "5" && indices.show_labels !== -1 && row[indices.show_labels].trim().toLowerCase() === "true"
         });
         if (!checkedSettings.ok) return { locations: [], skipped: [{ row: record.row, reason: checkedSettings.errors.join("; ") }], fatal: "Invalid CSV defaults" };
         importedSettings = checkedSettings.value;
@@ -197,18 +200,18 @@
 
   function exportCsv(value, settings) {
     const defaults = validateSettings(settings).value;
-    const header = ["name", "icon", "icon_color", "background_color", "marker_diameter", "lat", "long", "default_icon", "default_icon_color", "default_background_color", "default_marker_diameter", "sondehub_csv_version"];
+    const header = ["name", "icon", "icon_color", "background_color", "marker_diameter", "lat", "long", "default_icon", "default_icon_color", "default_background_color", "default_marker_diameter", "show_labels", "sondehub_csv_version"];
     const rows = Array.isArray(value) ? value.reduce((all, item) => {
       const result = validateLocation(item, { allowGeneratedId: false, inheritMissingIcon: true, inheritMissingColors: true, inheritMissingDiameter: true });
       if (result.ok) {
         const safeName = /^[=+\-@']/.test(result.value.name) ? `'${result.value.name}` : result.value.name;
-        all.push([safeName, result.value.icon || "", result.value.iconColor || "", result.value.backgroundColor || "", result.value.markerDiameter || "", result.value.lat, result.value.long, defaults.icon, defaults.iconColor, defaults.backgroundColor, defaults.markerDiameter, "4"]);
+        all.push([safeName, result.value.icon || "", result.value.iconColor || "", result.value.backgroundColor || "", result.value.markerDiameter || "", result.value.lat, result.value.long, defaults.icon, defaults.iconColor, defaults.backgroundColor, defaults.markerDiameter, defaults.showLabels, "5"]);
       }
       return all;
     }, []) : [];
-    if (!rows.length) rows.push(["", "", "", "", "", "", "", defaults.icon, defaults.iconColor, defaults.backgroundColor, defaults.markerDiameter, "4"]);
+    if (!rows.length) rows.push(["", "", "", "", "", "", "", defaults.icon, defaults.iconColor, defaults.backgroundColor, defaults.markerDiameter, defaults.showLabels, "5"]);
     return [header].concat(rows).map((row) => row.map(csvField).join(",")).join("\r\n") + "\r\n";
   }
 
-  return { DEFAULT_ICON, DEFAULT_ICON_COLOR, DEFAULT_BACKGROUND_COLOR, DEFAULT_MARKER_DIAMETER, MIN_MARKER_DIAMETER, MAX_MARKER_DIAMETER, ICONS, normalizeIcon, normalizeColor, markerDiameterFrom, validateSettings, createId, validateLocation, resolveLocationAppearance, resolveLocationColors: resolveLocationAppearance, parseCsv, importCsv, exportCsv };
+  return { DEFAULT_ICON, DEFAULT_ICON_COLOR, DEFAULT_BACKGROUND_COLOR, DEFAULT_MARKER_DIAMETER, DEFAULT_SHOW_LABELS, MIN_MARKER_DIAMETER, MAX_MARKER_DIAMETER, ICONS, normalizeIcon, normalizeColor, markerDiameterFrom, validateSettings, createId, validateLocation, resolveLocationAppearance, resolveLocationColors: resolveLocationAppearance, parseCsv, importCsv, exportCsv };
 });
