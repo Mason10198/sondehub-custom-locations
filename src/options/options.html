@@ -12,6 +12,39 @@
       <h1>SondeHub Custom Locations</h1>
     </header>
 
+    <section class="card" aria-labelledby="defaults-title">
+      <div class="section-heading">
+        <div>
+          <h2 id="defaults-title">Marker defaults</h2>
+          <p class="section-note">Used when a location has no override.</p>
+        </div>
+        <div class="marker-preview" id="default-preview" aria-hidden="true"></div>
+      </div>
+      <form id="defaults-form">
+        <input id="default-icon" type="hidden">
+        <div class="setting-list">
+          <div class="setting-row">
+            <div><span class="setting-label">Icon</span><span id="default-icon-label" class="setting-value"></span></div>
+            <button id="choose-default-icon" class="secondary compact" type="button">Choose</button>
+          </div>
+          <label class="setting-row color-setting" for="default-icon-color">
+            <span class="setting-label">Icon color</span>
+            <span class="color-control"><span id="default-icon-color-value" class="setting-value"></span><input id="default-icon-color" type="color" value="#000000"></span>
+          </label>
+          <label class="setting-row color-setting" for="default-background-color">
+            <span class="setting-label">Background</span>
+            <span class="color-control"><span id="default-background-color-value" class="setting-value"></span><input id="default-background-color" type="color" value="#facc15"></span>
+          </label>
+          <label class="setting-row" for="default-marker-diameter">
+            <span class="setting-label">Circle diameter</span>
+            <span class="number-control"><input id="default-marker-diameter" type="number" min="20" max="64" step="1" inputmode="numeric" value="26"><span>px</span></span>
+          </label>
+        </div>
+        <button class="primary wide-mobile" type="submit">Save defaults</button>
+      </form>
+      <p id="defaults-message" class="message" role="status" aria-live="polite"></p>
+    </section>
+
     <section class="card" aria-labelledby="add-title">
       <h2 id="add-title">Add location</h2>
       <form id="location-form">
@@ -71,39 +104,6 @@
       <div class="section-heading"><div><h2 id="saved-title">Saved locations</h2><p id="count" class="section-note"></p></div><button id="delete-all" class="danger compact" type="button" hidden>Delete all</button></div>
       <div id="empty-state" class="empty-state">No saved locations.</div>
       <ul id="locations" class="location-list"></ul>
-    </section>
-
-    <section class="card" aria-labelledby="defaults-title">
-      <div class="section-heading">
-        <div>
-          <h2 id="defaults-title">Marker defaults</h2>
-          <p class="section-note">Used when a location has no override.</p>
-        </div>
-        <div class="marker-preview" id="default-preview" aria-hidden="true"></div>
-      </div>
-      <form id="defaults-form">
-        <input id="default-icon" type="hidden">
-        <div class="setting-list">
-          <div class="setting-row">
-            <div><span class="setting-label">Icon</span><span id="default-icon-label" class="setting-value"></span></div>
-            <button id="choose-default-icon" class="secondary compact" type="button">Choose</button>
-          </div>
-          <label class="setting-row color-setting" for="default-icon-color">
-            <span class="setting-label">Icon color</span>
-            <span class="color-control"><span id="default-icon-color-value" class="setting-value"></span><input id="default-icon-color" type="color" value="#000000"></span>
-          </label>
-          <label class="setting-row color-setting" for="default-background-color">
-            <span class="setting-label">Background</span>
-            <span class="color-control"><span id="default-background-color-value" class="setting-value"></span><input id="default-background-color" type="color" value="#facc15"></span>
-          </label>
-          <label class="setting-row" for="default-marker-diameter">
-            <span class="setting-label">Circle diameter</span>
-            <span class="number-control"><input id="default-marker-diameter" type="number" min="20" max="64" step="1" inputmode="numeric" value="26"><span>px</span></span>
-          </label>
-        </div>
-        <button class="primary wide-mobile" type="submit">Save defaults</button>
-      </form>
-      <p id="defaults-message" class="message" role="status" aria-live="polite"></p>
     </section>
 
     <details class="card utility-card">
