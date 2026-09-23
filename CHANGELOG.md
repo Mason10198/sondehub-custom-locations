@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-09-23
+
+- Reduced the default marker circle from 28 to 26 pixels while retaining a 16-pixel icon glyph.
+- Increased the icon-to-circle ratio for larger markers to reduce excess inner padding.
+
 ## [1.6.0] - 2026-09-23
 
 - Reworked the options page for small screens with touch-sized controls, compact copy, clearer saved-location rows, and collapsed backup/import tools.

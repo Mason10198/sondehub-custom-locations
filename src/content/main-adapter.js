@@ -22,7 +22,7 @@
   function iconFor(location) {
     const safeIcon = iconCatalog.normalizeIcon(location.icon);
     const diameter = location.markerDiameter;
-    const iconDiameter = Math.max(12, Math.round(diameter * 0.57));
+    const iconDiameter = Math.min(diameter - 4, Math.max(16, Math.round(diameter * 0.62)));
     const svg = iconCatalog.svgFor(safeIcon).replace("<svg ", `<svg style="width:${iconDiameter}px;height:${iconDiameter}px" `);
     const half = diameter / 2;
     return window.L.divIcon({ className: "shcl-marker-shell", html: `<span style="box-sizing:border-box;display:grid;width:${diameter}px;height:${diameter}px;place-items:center;border:2px solid ${location.iconColor};border-radius:50%;background:${location.backgroundColor};color:${location.iconColor};box-shadow:0 1px 3px #0008" aria-hidden="true">${svg}</span>`, iconSize: [diameter, diameter], iconAnchor: [half, half], popupAnchor: [0, -half] });
