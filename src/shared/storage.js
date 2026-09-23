@@ -8,7 +8,7 @@
   const LEGACY_STORAGE_KEY = "locations";
   const SETTINGS_KEY = "settings";
   const RECORD_PREFIX = "location:";
-  const RECORD_SCHEMA = 2;
+  const RECORD_SCHEMA = 3;
   const MAX_LOCATIONS = 250;
   const SYNC_QUOTA_BYTES = 102400;
   const SYNC_QUOTA_BYTES_PER_ITEM = 8192;
@@ -17,7 +17,7 @@
     const seen = new Set();
     if (!Array.isArray(value)) return [];
     return value.reduce((all, item) => {
-      const result = locationsApi.validateLocation(item, { inheritMissingColors: true });
+      const result = locationsApi.validateLocation(item, { inheritMissingIcon: true, inheritMissingColors: true });
       if (!result.ok || seen.has(result.value.id)) return all;
       seen.add(result.value.id);
       all.push(result.value);
@@ -56,10 +56,12 @@
           const currentSchema = record && record.schema === RECORD_SCHEMA;
           const source = record && record.location ? { ...record.location } : null;
           if (source && !currentSchema) {
+            const normalizedIcon = locationsApi.normalizeIcon(source.icon);
+            source.icon = normalizedIcon === locationsApi.DEFAULT_ICON ? null : normalizedIcon;
             source.iconColor = legacyColor(source.iconColor, locationsApi.DEFAULT_ICON_COLOR);
             source.backgroundColor = legacyColor(source.backgroundColor, locationsApi.DEFAULT_BACKGROUND_COLOR);
           }
-          const checked = locationsApi.validateLocation(source, { allowGeneratedId: false, inheritMissingColors: true });
+          const checked = locationsApi.validateLocation(source, { allowGeneratedId: false, inheritMissingIcon: true, inheritMissingColors: true });
           return checked.ok && checked.value.id && key === `${RECORD_PREFIX}${checked.value.id}`
             ? { key, location: checked.value, order: Number.isSafeInteger(record.order) && record.order >= 0 ? record.order : Number.MAX_SAFE_INTEGER, needsMigration: !currentSchema }
             : null;
@@ -125,14 +127,15 @@
     async function migrate() {
       const synced = await readArea(storageArea);
       const syncedRecords = recordsFrom(synced);
-      const inheritedLegacyColors = (location) => Object.freeze({
+      const inheritedLegacyAppearance = (location) => Object.freeze({
         ...location,
+        icon: locationsApi.normalizeIcon(location.icon) === locationsApi.DEFAULT_ICON ? null : locationsApi.normalizeIcon(location.icon),
         iconColor: legacyColor(location.iconColor, locationsApi.DEFAULT_ICON_COLOR),
         backgroundColor: legacyColor(location.backgroundColor, locationsApi.DEFAULT_BACKGROUND_COLOR)
       });
-      const syncLegacy = normalizeCollection(synced[LEGACY_STORAGE_KEY]).map(inheritedLegacyColors);
+      const syncLegacy = normalizeCollection(synced[LEGACY_STORAGE_KEY]).map(inheritedLegacyAppearance);
       const local = legacyLocalArea && legacyLocalArea !== storageArea ? await readArea(legacyLocalArea) : {};
-      const localLegacy = normalizeCollection(local[LEGACY_STORAGE_KEY]).map(inheritedLegacyColors);
+      const localLegacy = normalizeCollection(local[LEGACY_STORAGE_KEY]).map(inheritedLegacyAppearance);
       const needsRecordMigration = syncedRecords.some((record) => record.needsMigration);
       if (!syncLegacy.length && !localLegacy.length && !needsRecordMigration) return;
       const merged = normalizeCollection(syncedRecords.map((record) => record.location).concat(syncLegacy, localLegacy));
@@ -206,7 +209,7 @@
     }
 
     function save(input) {
-      const checked = locationsApi.validateLocation(input, { inheritMissingColors: true });
+      const checked = locationsApi.validateLocation(input, { inheritMissingIcon: true, inheritMissingColors: true });
       if (!checked.ok) throw new Error(checked.errors.join("; "));
       return serialize(async () => {
         await ensureMigrated();

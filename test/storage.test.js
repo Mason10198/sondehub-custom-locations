@@ -36,11 +36,12 @@ test("repository migrates legacy local locations into sync without losing synced
   assert.deepEqual((await repo.getAll()).map((location) => location.id), ["remote", "local"]);
   assert.equal(Object.hasOwn(local.snapshot(), "locations"), false);
   assert.deepEqual(Object.keys(sync.snapshot()).sort(), ["location:local", "location:remote"]);
-  assert.equal(sync.snapshot()["location:local"].schema, 2);
+  assert.equal(sync.snapshot()["location:local"].schema, 3);
+  assert.equal(sync.snapshot()["location:local"].location.icon, null);
   assert.equal(sync.snapshot()["location:local"].location.iconColor, null);
 });
 
-test("record migration makes old default colors inherited and preserves old custom colors", async () => {
+test("record migration makes old default appearance inherited and preserves old custom appearance", async () => {
   const sync = memoryStorage({
     "location:default": { order: 0, location: { id: "default", name: "Default", iconColor: "#000000", backgroundColor: "#facc15", lat: 1, long: 2 } },
     "location:custom": { order: 1, location: { id: "custom", name: "Custom", iconColor: "#ffffff", backgroundColor: "#2563eb", lat: 3, long: 4 } }
@@ -51,8 +52,9 @@ test("record migration makes old default colors inherited and preserves old cust
     { id: "default", iconColor: null, backgroundColor: null },
     { id: "custom", iconColor: "#ffffff", backgroundColor: "#2563eb" }
   ]);
-  assert.equal(sync.snapshot()["location:default"].schema, 2);
-  assert.equal(sync.snapshot()["location:custom"].schema, 2);
+  assert.equal(sync.snapshot()["location:default"].schema, 3);
+  assert.equal(sync.snapshot()["location:default"].location.icon, null);
+  assert.equal(sync.snapshot()["location:custom"].schema, 3);
 });
 
 test("repository migrates the legacy single-array sync layout", async () => {
@@ -69,7 +71,7 @@ test("repositories sharing a sync area observe each other's completed changes", 
   await firstDevice.save({ id: "shared", name: "First", lat: 1, long: 2 });
   assert.equal((await secondDevice.getAll())[0].name, "First");
   await secondDevice.save({ id: "shared", name: "Updated", lat: 3, long: 4 });
-  assert.deepEqual(await firstDevice.getAll(), [{ id: "shared", name: "Updated", icon: "16-solid/map-pin", iconColor: null, backgroundColor: null, lat: 3, long: 4 }]);
+  assert.deepEqual(await firstDevice.getAll(), [{ id: "shared", name: "Updated", icon: null, iconColor: null, backgroundColor: null, lat: 3, long: 4 }]);
   await secondDevice.remove("shared");
   assert.deepEqual(await firstDevice.getAll(), []);
 });
@@ -99,24 +101,24 @@ test("changing defaults updates inherited locations while preserving overrides",
     { id: "inherited", name: "Inherited", lat: 1, long: 2 },
     { id: "override", name: "Override", iconColor: "#ffffff", backgroundColor: "#2563eb", lat: 3, long: 4 }
   ]);
-  await repo.saveSettings({ iconColor: "#112233", backgroundColor: "#abcdef" });
-  assert.deepEqual(await repo.getSettings(), { iconColor: "#112233", backgroundColor: "#abcdef" });
-  assert.deepEqual((await repo.getResolved()).map(({ id, iconColor, backgroundColor }) => ({ id, iconColor, backgroundColor })), [
-    { id: "inherited", iconColor: "#112233", backgroundColor: "#abcdef" },
-    { id: "override", iconColor: "#ffffff", backgroundColor: "#2563eb" }
+  await repo.saveSettings({ icon: "home", iconColor: "#112233", backgroundColor: "#abcdef" });
+  assert.deepEqual(await repo.getSettings(), { icon: "16-solid/home", iconColor: "#112233", backgroundColor: "#abcdef" });
+  assert.deepEqual((await repo.getResolved()).map(({ id, icon, iconColor, backgroundColor }) => ({ id, icon, iconColor, backgroundColor })), [
+    { id: "inherited", icon: "16-solid/home", iconColor: "#112233", backgroundColor: "#abcdef" },
+    { id: "override", icon: "16-solid/home", iconColor: "#ffffff", backgroundColor: "#2563eb" }
   ]);
   assert.deepEqual(Object.keys(sync.setCalls().at(-1)), ["settings"]);
 });
 
-test("changing defaults updates all 50 imported locations without color overrides", async () => {
+test("changing defaults updates all 50 imported locations without appearance overrides", async () => {
   const repo = createRepository(memoryStorage());
   const imported = Array.from({ length: 50 }, (_, index) => ({ id: `import-${index}`, name: `Imported ${index}`, lat: index / 10, long: -index / 10 }));
   await repo.addMany(imported);
-  await repo.saveSettings({ iconColor: "#334455", backgroundColor: "#ddeeff" });
+  await repo.saveSettings({ icon: "radio", iconColor: "#334455", backgroundColor: "#ddeeff" });
   const resolved = await repo.getResolved();
   assert.equal(resolved.length, 50);
-  assert.equal(resolved.every((location) => location.iconColor === "#334455" && location.backgroundColor === "#ddeeff"), true);
-  assert.equal((await repo.getAll()).every((location) => location.iconColor === null && location.backgroundColor === null), true);
+  assert.equal(resolved.every((location) => location.icon === "16-solid/radio" && location.iconColor === "#334455" && location.backgroundColor === "#ddeeff"), true);
+  assert.equal((await repo.getAll()).every((location) => location.icon === null && location.iconColor === null && location.backgroundColor === null), true);
 });
 
 test("repository adds, removes, and clears locations", async () => {

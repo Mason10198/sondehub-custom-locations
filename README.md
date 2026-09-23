@@ -6,7 +6,7 @@ This is an independent community project. It is not affiliated with, sponsored b
 
 - **Firefox desktop:** 140 or newer
 - **Firefox for Android:** 142 or newer
-- **Current release:** 1.4.0
+- **Current release:** 1.5.0
 - **License:** MIT
 - **Status:** source and unsigned builds are available; persistent installation requires Mozilla signing
 
@@ -35,9 +35,9 @@ The extension has no project-operated backend, account, analytics, telemetry, re
 - Adds, edits, and deletes locations from a responsive options page.
 - Synchronizes locations between desktop Firefox profiles signed in to the same Firefox account with extension syncing enabled.
 - Exports and imports portable CSV backups on desktop and mobile.
-- Provides synchronized default icon and background colors, initially black on yellow.
-- Lets individual markers override either default color while inherited markers follow future default changes.
-- Imports CSV files with required `name,icon,lat,long` columns and optional color columns in **add** or **replace all** mode.
+- Provides a synchronized default icon and default colors, initially Map pin in black on yellow.
+- Lets individual markers override the icon or either color while inherited markers follow future default changes.
+- Imports CSV files with required `name,lat,long` columns and optional appearance override columns in **add** or **replace all** mode.
 - Reports skipped CSV rows with their source row number and validation error.
 - Updates open SondeHub tabs immediately when locations change.
 - Includes all 316 optimized Heroicons v2.2.0 Micro SVGs.
@@ -82,8 +82,8 @@ This launches a disposable Firefox development profile and is also temporary.
 ## Use the extension
 
 1. Open the extension's **Preferences** page from `about:addons`.
-2. Set the global default marker colors if desired.
-3. Enter a location name, choose an icon, optionally enable per-location icon or background color overrides, and enter decimal latitude and longitude.
+2. Set the global default marker icon and colors if desired.
+3. Enter a location name and decimal latitude and longitude. Optionally enable per-location icon or color overrides.
 4. Select **Save location**.
 5. Open or return to a supported SondeHub map.
 6. Enable **Custom locations** in the map's layer control if it is not already visible.
@@ -96,16 +96,16 @@ Editing or deleting a location updates supported SondeHub tabs without a reload.
 CSV files must have this header:
 
 ```csv
-name,icon,lat,long
+name,lat,long
 ```
 
 Example:
 
 ```csv
-name,icon,lat,long,icon_color,background_color
-Home,home,40.7128,-74.0060,,
-Launch site,rocket-launch,34.0522,-118.2437,#ffffff,#2563eb
-"Field, west",landing,51.5074,-0.1278,#000000,#facc15
+name,lat,long,icon,icon_color,background_color
+Home,40.7128,-74.0060,,,
+Launch site,34.0522,-118.2437,rocket-launch,#ffffff,#2563eb
+"Field, west",51.5074,-0.1278,landing,#000000,#facc15
 ```
 
 A complete sample is available at [`examples/locations.csv`](examples/locations.csv).
@@ -114,7 +114,7 @@ Import behavior:
 
 - **Add:** appends valid imported locations to the saved list.
 - **Replace all:** replaces the saved list with valid imported locations.
-- Header names are case-insensitive. The required columns are `name`, `icon`, `lat`, and `long`; `icon_color` and `background_color` are optional, and other extra columns are ignored.
+- Header names are case-insensitive. The only required columns are `name`, `lat`, and `long`; `icon`, `icon_color`, and `background_color` are optional overrides, and other extra columns are ignored.
 - Invalid rows are skipped and reported; valid rows in the same file still import.
 - Latitude must be from `-90` to `90`; longitude must be from `-180` to `180`.
 - Names are trimmed, required, and limited to 120 characters.
@@ -122,13 +122,13 @@ Import behavior:
 - Standard quoted CSV fields, commas inside quoted names, escaped quotes, CRLF, and quoted multiline fields are supported.
 - Canonical icon keys use `16-solid/name`, such as `16-solid/map-pin` or `16-solid/home`.
 - Legacy keys such as `pin`, `home`, `launch`, `landing`, and `radio` remain supported.
-- Missing or unknown icon values use the default Map pin.
+- Missing or blank icon values inherit the synchronized default icon and follow later default-icon changes. A nonblank icon is stored as a per-location override. Unknown nonblank icon values retain backward-compatible Map pin fallback behavior.
 - Colors must be six-digit hexadecimal values such as `#ffffff` or `#2563eb`.
 - A nonblank imported color is stored as a per-location override, even when it equals the current default.
 - Missing or blank colors inherit the synchronized default colors and follow later default changes.
 - Rows containing a nonblank invalid color are skipped and reported.
-- **Export CSV backup** writes every saved location, icon, color override, coordinate, and the synchronized default colors to a portable CSV file. Inherited colors remain blank so inheritance survives a round trip.
-- Importing an extension-generated backup restores its default colors as well as its locations.
+- **Export CSV backup** writes every saved location, appearance override, coordinate, and synchronized default appearance to a portable CSV file. Inherited icon and color cells remain blank so inheritance survives a round trip.
+- Importing an extension-generated backup restores its default icon and colors as well as its locations.
 - Exported CSV files can be imported on desktop or Android in either add or replace mode.
 - CSV backups intentionally create new internal IDs when imported; display data is preserved.
 - Exports include a `sondehub_csv_version` column and safely prefix spreadsheet-formula-leading names; re-import removes only that export escape and restores the exact name.
@@ -150,7 +150,7 @@ npm test
 npm run lint
 npm run package
 npm run verify:package
-python3 -m zipfile -t dist/sondehub-custom-locations-1.4.0.xpi
+python3 -m zipfile -t dist/sondehub-custom-locations-1.5.0.xpi
 npx --yes web-ext@latest lint --source-dir . \
   --ignore-files scripts/package.py scripts/verify-package.py
 ```
@@ -258,7 +258,7 @@ On a real device, verify:
 
 ### CSV import fails or skips rows
 
-- Confirm the file includes `name,icon,lat,long` headers. Optional colors use `icon_color,background_color`.
+- Confirm the file includes `name,lat,long` headers. Optional overrides use `icon,icon_color,background_color`.
 - Confirm any supplied colors are six-digit hexadecimal values beginning with `#`.
 - Check latitude and longitude ranges and the 120-character name limit.
 - Review the options-page skipped-row report; valid rows still import unless the CSV header or quoting is fatally invalid.
@@ -284,8 +284,8 @@ On a real device, verify:
 - On desktop, Firefox itself may transmit extension storage through the user's Firefox Sync account. The extension does not choose the server, hold credentials, or receive the data.
 - Extension pages use a restrictive content security policy with `connect-src 'none'` and local-only scripts and styles.
 - The AMO data-collection declaration is `none`.
-- Default colors and location records synchronize through the same browser-managed storage area.
-- Deleting all locations removes location records but preserves the selected default colors.
+- Default appearance and location records synchronize through the same browser-managed storage area.
+- Deleting all locations removes location records but preserves the selected default icon and colors.
 - Firefox account, profile backup, Sync, clearing, and removal behavior remains controlled by Firefox.
 
 ### Supported-page boundary
@@ -324,8 +324,8 @@ third_party/heroicons/ Pinned Heroicons source and upstream license
 - Firefox Sync must be enabled for extensions on each desktop profile. Propagation is asynchronous and requires the same signed extension ID.
 - Firefox for Android does not synchronize WebExtension storage; use CSV backup and restore there.
 - Storage mutations are serialized within one extension context and single-marker changes write only that marker's Sync record. Concurrent edits to the same marker on different desktops can still resolve by Firefox Sync's conflict behavior.
-- Locations imported without colors and locations saved without enabled color overrides inherit the synchronized defaults. Imported explicit colors and enabled editor overrides remain fixed.
-- During migration, legacy black-on-yellow values become inherited; legacy nondefault colors remain overrides.
+- Locations imported without appearance overrides and locations saved without enabled overrides inherit the synchronized defaults. Imported nonblank appearance values and enabled editor overrides remain fixed.
+- During migration, legacy Map pin and black-on-yellow values become inherited; legacy nondefault appearance values remain overrides.
 - The extension stores and renders at most 250 locations, checks Firefox Sync's per-item and total byte quotas before each write, and bounds page-world and Leaflet work.
 - Firefox for iOS does not run Firefox WebExtensions. Supporting iPhone or iPad would require a separate Safari Web Extension and Xcode application.
 

@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-09-23
+
+- Made CSV imports require only `name`, `lat`, and `long`; icon and color columns are optional overrides.
+- Added a synchronized global default icon alongside the existing default colors.
+- Made locations without icon overrides follow later default-icon changes, including bulk imports.
+- Preserved default-icon and per-location override intent through migration and CSV backup/restore.
+
 ## [1.4.0] - 2026-09-23
 
 - Added synchronized global default icon and background colors.
@@ -49,7 +56,8 @@ All notable changes to this project are documented here.
 - Added bounded one-way Firefox isolated-world to page-world transport.
 - Added deterministic unsigned XPI packaging and desktop Firefox verification.
 
-[Unreleased]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.2.0...v1.2.1

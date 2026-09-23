@@ -28,7 +28,7 @@ test("storage bridge pushes minimal sync snapshots and ignores page request even
   const browser = {
     storage: {
       sync: area({
-        settings: { iconColor: "#112233", backgroundColor: "#abcdef" },
+        settings: { icon: "16-solid/home", iconColor: "#112233", backgroundColor: "#abcdef" },
         "location:private": { schema: 2, order: 0, location: { id: "private", name: "Home", icon: "pin", iconColor: null, backgroundColor: null, lat: 1, long: 2 } },
         "location:override": { schema: 2, order: 1, location: { id: "override", name: "Override", icon: "star", iconColor: "#ffffff", backgroundColor: "#2563eb", lat: 3, long: 4 } }
       }),
@@ -43,7 +43,7 @@ test("storage bridge pushes minimal sync snapshots and ignores page request even
   assert.equal(typeof events[0].detail, "string");
   const locations = protocol.message(events[0].detail);
   assert.deepEqual(locations, [
-    { name: "Home", icon: "16-solid/map-pin", iconColor: "#112233", backgroundColor: "#abcdef", lat: 1, long: 2 },
+    { name: "Home", icon: "16-solid/home", iconColor: "#112233", backgroundColor: "#abcdef", lat: 1, long: 2 },
     { name: "Override", icon: "16-solid/star", iconColor: "#ffffff", backgroundColor: "#2563eb", lat: 3, long: 4 }
   ]);
   assert.equal(Object.hasOwn(locations[0], "id"), false);

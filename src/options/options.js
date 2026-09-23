@@ -3,11 +3,12 @@
   const repository = SondeHubLocationRepository.createRepository(browser.storage.sync, browser.storage.local);
   const form = document.getElementById("location-form");
   const defaultsForm = document.getElementById("defaults-form");
-  const defaultFields = { iconColor: document.getElementById("default-icon-color"), backgroundColor: document.getElementById("default-background-color") };
+  const defaultFields = { icon: document.getElementById("default-icon"), iconColor: document.getElementById("default-icon-color"), backgroundColor: document.getElementById("default-background-color") };
   const fields = {
     id: document.getElementById("location-id"),
     name: document.getElementById("name"),
     icon: document.getElementById("icon"),
+    overrideIcon: document.getElementById("override-icon"),
     iconColor: document.getElementById("icon-color"),
     backgroundColor: document.getElementById("background-color"),
     overrideIconColor: document.getElementById("override-icon-color"),
@@ -25,7 +26,7 @@
   const iconResultsStatus = document.getElementById("icon-results-status");
   const iconEmpty = document.getElementById("icon-empty");
   const MAX_VISIBLE_ICON_RESULTS = 100;
-  let settings = { iconColor: SondeHubLocations.DEFAULT_ICON_COLOR, backgroundColor: SondeHubLocations.DEFAULT_BACKGROUND_COLOR };
+  let settings = { icon: SondeHubLocations.DEFAULT_ICON, iconColor: SondeHubLocations.DEFAULT_ICON_COLOR, backgroundColor: SondeHubLocations.DEFAULT_BACKGROUND_COLOR };
 
   function setMessage(target, text, kind) { target.textContent = text; target.className = `message ${kind || ""}`; }
   function storageError(target, operation, error) {
@@ -42,6 +43,13 @@
       backgroundColor: fields.overrideBackgroundColor.checked ? fields.backgroundColor.value : settings.backgroundColor
     };
   }
+  function effectiveIcon() { return fields.overrideIcon.checked ? fields.icon.value : settings.icon; }
+  function syncIconControls() {
+    document.getElementById("icon-override-controls").hidden = !fields.overrideIcon.checked;
+    if (!fields.overrideIcon.checked) fields.icon.value = settings.icon;
+    renderIconPreview();
+    renderIconResults();
+  }
   function syncColorControls() {
     fields.iconColor.disabled = !fields.overrideIconColor.checked;
     fields.backgroundColor.disabled = !fields.overrideBackgroundColor.checked;
@@ -50,7 +58,7 @@
     renderIconPreview();
   }
   function renderIconPreview() {
-    const icon = SondeHubIcons.iconFor(fields.icon.value);
+    const icon = SondeHubIcons.iconFor(effectiveIcon());
     const colors = effectiveColors();
     const preview = document.getElementById("icon-preview-image");
     preview.style.setProperty("--marker-icon-color", colors.iconColor);
@@ -103,13 +111,15 @@
   function resetForm() {
     form.reset();
     fields.id.value = "";
+    fields.overrideIcon.checked = false;
     fields.overrideIconColor.checked = false;
     fields.overrideBackgroundColor.checked = false;
+    fields.icon.value = settings.icon;
     fields.iconColor.value = settings.iconColor;
     fields.backgroundColor.value = settings.backgroundColor;
+    syncIconControls();
     syncColorControls();
     clearIconSearch();
-    selectIcon(SondeHubLocations.DEFAULT_ICON);
     iconResultsPanel.open = false;
     document.getElementById("cancel-edit").hidden = true;
   }
@@ -117,7 +127,7 @@
     return {
       id: fields.id.value,
       name: fields.name.value,
-      icon: SondeHubIcons.normalizeIcon(fields.icon.value),
+      icon: fields.overrideIcon.checked ? SondeHubIcons.normalizeIcon(fields.icon.value) : null,
       iconColor: fields.overrideIconColor.checked ? fields.iconColor.value : null,
       backgroundColor: fields.overrideBackgroundColor.checked ? fields.backgroundColor.value : null,
       lat: fields.lat.value,
@@ -127,16 +137,17 @@
   function editLocation(location) {
     fields.id.value = location.id;
     fields.name.value = location.name;
-    fields.icon.value = location.icon;
+    fields.overrideIcon.checked = location.icon !== null;
+    fields.icon.value = location.icon || settings.icon;
     fields.lat.value = location.lat;
     fields.long.value = location.long;
     fields.overrideIconColor.checked = location.iconColor !== null;
     fields.overrideBackgroundColor.checked = location.backgroundColor !== null;
     fields.iconColor.value = location.iconColor || settings.iconColor;
     fields.backgroundColor.value = location.backgroundColor || settings.backgroundColor;
+    syncIconControls();
     syncColorControls();
     clearIconSearch();
-    selectIcon(fields.icon.value);
     document.getElementById("cancel-edit").hidden = false;
     fields.name.focus();
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -145,8 +156,10 @@
     try {
       const [nextSettings, locations] = await Promise.all([repository.getSettings(), repository.getAll()]);
       settings = nextSettings;
+      defaultFields.icon.value = settings.icon;
       defaultFields.iconColor.value = settings.iconColor;
       defaultFields.backgroundColor.value = settings.backgroundColor;
+      syncIconControls();
       syncColorControls();
       document.getElementById("count").textContent = `${locations.length} saved location${locations.length === 1 ? "" : "s"}`;
       list.replaceChildren();
@@ -154,13 +167,14 @@
         const resolved = SondeHubLocations.resolveLocationColors(location, settings).value;
         const item = document.createElement("li");
         const details = document.createElement("div");
-        const icon = SondeHubIcons.iconFor(location.icon);
-        const name = document.createElement("strong"); name.textContent = `${icon.label}: ${location.name}`;
+        const icon = SondeHubIcons.iconFor(resolved.icon);
+        const iconSource = location.icon === null ? "default" : "override";
+        const name = document.createElement("strong"); name.textContent = `${icon.label}: ${location.name}`; name.title = `Icon ${icon.label} (${iconSource})`;
         const colors = document.createElement("span");
         colors.className = "location-colors";
-        const iconSource = location.iconColor === null ? "default" : "override";
+        const iconColorSource = location.iconColor === null ? "default" : "override";
         const backgroundSource = location.backgroundColor === null ? "default" : "override";
-        colors.title = `Icon ${resolved.iconColor} (${iconSource}); background ${resolved.backgroundColor} (${backgroundSource})`;
+        colors.title = `Icon color ${resolved.iconColor} (${iconColorSource}); background ${resolved.backgroundColor} (${backgroundSource})`;
         colors.style.setProperty("--marker-icon-color", resolved.iconColor);
         colors.style.setProperty("--marker-background-color", resolved.backgroundColor);
         const coords = document.createElement("p"); coords.textContent = `${location.lat}, ${location.long}`;
@@ -189,7 +203,8 @@
     iconResults.querySelector("button")?.focus();
   });
   document.getElementById("clear-icon-search").addEventListener("click", () => { clearIconSearch(); iconSearch.focus(); });
-  document.getElementById("reset-icon").addEventListener("click", () => selectIcon(SondeHubLocations.DEFAULT_ICON));
+  fields.overrideIcon.addEventListener("change", syncIconControls);
+  document.getElementById("clear-icon-override").addEventListener("click", () => { fields.overrideIcon.checked = false; syncIconControls(); });
   for (const colorField of [fields.iconColor, fields.backgroundColor]) colorField.addEventListener("input", renderIconPreview);
   for (const overrideField of [fields.overrideIconColor, fields.overrideBackgroundColor]) overrideField.addEventListener("change", syncColorControls);
   document.getElementById("clear-color-overrides").addEventListener("click", () => {
@@ -200,21 +215,22 @@
 
   defaultsForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const checked = SondeHubLocations.validateSettings({ iconColor: defaultFields.iconColor.value, backgroundColor: defaultFields.backgroundColor.value });
+    const checked = SondeHubLocations.validateSettings({ icon: defaultFields.icon.value, iconColor: defaultFields.iconColor.value, backgroundColor: defaultFields.backgroundColor.value });
     if (!checked.ok) { setMessage(defaultsMessage, checked.errors.join("; "), "error"); return; }
     try {
       settings = await repository.saveSettings(checked.value);
+      syncIconControls();
       syncColorControls();
-      setMessage(defaultsMessage, "Default colors saved. Inherited markers updated.", "success");
+      setMessage(defaultsMessage, "Default appearance saved. Inherited markers updated.", "success");
       await render();
     } catch (error) {
-      storageError(defaultsMessage, "save default colors", error);
+      storageError(defaultsMessage, "save default appearance", error);
     }
   });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const checked = SondeHubLocations.validateLocation(locationFromForm(), { inheritMissingColors: true });
+    const checked = SondeHubLocations.validateLocation(locationFromForm(), { inheritMissingIcon: true, inheritMissingColors: true });
     if (!checked.ok) { setMessage(message, checked.errors.join("; "), "error"); return; }
     try {
       await repository.save(checked.value);
@@ -269,6 +285,12 @@
   browser.storage.onChanged.addListener((changes, area) => {
     if ((area === "sync" || area === "local") && SondeHubLocationRepository.isLocationChange(changes)) void render();
   });
+  for (const icon of SondeHubIcons.ICONS) {
+    const option = document.createElement("option");
+    option.value = icon.key;
+    option.textContent = icon.label;
+    defaultFields.icon.append(option);
+  }
   resetForm();
   void render();
 })();
