@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-09-22
+
+- Removed the redundant `host_permissions` declaration, leaving `storage` as the only extension API permission and exact static content-script matches as the only page access.
+- Added a local-only extension-page content security policy with all network connections disabled.
+- Removed the options-page external link and added automated checks that prohibit runtime network APIs and remote resources.
+- Reduced the deterministic XPI from 330 files to 14 by excluding redundant source SVG copies while retaining the complete generated local icon catalog and license.
+
 ## [1.2.0] - 2026-09-22
 
 - Added per-location icon and background color pickers with black-on-yellow defaults.
@@ -26,7 +33,8 @@ All notable changes to this project are documented here.
 - Added bounded one-way Firefox isolated-world to page-world transport.
 - Added deterministic unsigned XPI packaging and desktop Firefox verification.
 
-[Unreleased]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Mason10198/sondehub-custom-locations/releases/tag/v1.0.0

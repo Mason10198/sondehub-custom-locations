@@ -24,9 +24,6 @@ FIXED_FILES = (
     "src/shared/storage.js",
     "third_party/heroicons/LICENSE",
 )
-MICRO_ROOT = ROOT / "third_party" / "heroicons" / "optimized" / "16" / "solid"
-
-
 def assert_regular_file(file: Path) -> None:
     if not file.exists():
         raise RuntimeError(f"Missing allowlisted package file: {file.relative_to(ROOT)}")
@@ -42,12 +39,7 @@ def assert_regular_file(file: Path) -> None:
         current = current.parent
 
 
-files = [ROOT / relative for relative in FIXED_FILES]
-micro_files = sorted(MICRO_ROOT.glob("*.svg"), key=lambda file: file.name)
-if len(micro_files) != 316:
-    raise RuntimeError(f"Expected 316 allowlisted Heroicons Micro SVGs, found {len(micro_files)}")
-files.extend(micro_files)
-files = sorted(files, key=lambda file: file.relative_to(ROOT).as_posix())
+files = sorted((ROOT / relative for relative in FIXED_FILES), key=lambda file: file.relative_to(ROOT).as_posix())
 for file in files:
     assert_regular_file(file)
 

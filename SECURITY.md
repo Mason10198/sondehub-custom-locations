@@ -12,12 +12,12 @@ Include the affected version, Firefox platform, reproduction steps, and the secu
 
 ## Security boundaries
 
-The extension intentionally passes only marker names, icon keys, and coordinates into a supported SondeHub page so Leaflet can render them. That displayed data is inspectable by the page while the tab is open. The extension does not treat the supported page realm as a secret boundary.
+The extension intentionally passes only marker names, icon keys, colors, and coordinates into a supported SondeHub page so Leaflet can render them. That displayed data is inspectable by the page while the tab is open. The extension does not treat the supported page realm as a secret boundary.
 
 Expected invariants include:
 
 - No backend, analytics, telemetry, or extension-originated network requests.
-- Only the documented `storage` permission and three exact SondeHub host permissions.
+- Only the documented `storage` API permission and static content-script matches for the three exact SondeHub hosts; no separate `host_permissions` declaration.
 - A one-way, bounded, exact-schema storage-to-page bridge.
 - User text rendered with DOM text APIs rather than HTML.
 - SVG markup selected only from the pinned, generated Heroicons allowlist.

@@ -30,20 +30,8 @@ FIXED_NAMES = {
     "src/shared/storage.js",
     "third_party/heroicons/LICENSE",
 }
-MICRO_ROOT = ROOT / "third_party" / "heroicons" / "optimized" / "16" / "solid"
 EXPECTED_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
 EXPECTED_MODE = stat.S_IFREG | 0o644
-
-
-def expected_names():
-    micro_names = {
-        file.relative_to(ROOT).as_posix()
-        for file in MICRO_ROOT.glob("*.svg")
-        if file.is_file()
-    }
-    if len(micro_names) != 316:
-        raise RuntimeError(f"Expected 316 verified Heroicons Micro SVG paths, found {len(micro_names)}")
-    return FIXED_NAMES | micro_names
 
 
 def build_digest():
@@ -52,7 +40,7 @@ def build_digest():
 
 
 run(["node", str(VENDOR_SCRIPT)], cwd=ROOT, check=True)
-approved = expected_names()
+approved = FIXED_NAMES
 OUTPUT.unlink(missing_ok=True)
 first = build_digest()
 second = build_digest()

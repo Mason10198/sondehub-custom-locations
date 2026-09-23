@@ -16,12 +16,14 @@ for (const script of requiredOptionsScripts) {
   previousScriptOffset = offset;
 }
 if (!optionsHtml.includes('id="icon-search"') || !optionsHtml.includes('id="icon-results"') || optionsHtml.includes('id="icon-style"') || optionsHtml.includes('<select id="icon" ')) failures.push("options must provide the searchable Heroicons Micro picker without a style selector or native icon select");
-if (!optionsHtml.includes('href="https://heroicons.com/" target="_blank" rel="noopener noreferrer"')) failures.push("options must link safely to the official Heroicons site");
+if (/\b(?:href|src)=["']https?:\/\//i.test(optionsHtml)) failures.push("options must not contain external links or remotely loaded resources");
 if (manifest.manifest_version !== 3) failures.push("manifest_version must be 3");
-if (!Array.isArray(manifest.permissions) || !manifest.permissions.includes("storage")) failures.push("storage permission is required");
+if (!Array.isArray(manifest.permissions) || manifest.permissions.length !== 1 || manifest.permissions[0] !== "storage") failures.push("storage must be the only extension API permission");
+if (Object.hasOwn(manifest, "host_permissions")) failures.push("host_permissions must be omitted; static content-script matches provide the required site access");
+const expectedCsp = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
+if (manifest.content_security_policy?.extension_pages !== expectedCsp) failures.push("extension pages must use the locked-down local-only CSP");
 if (!manifest.browser_specific_settings || !manifest.browser_specific_settings.gecko || !Array.isArray(manifest.browser_specific_settings.gecko.data_collection_permissions?.required) || manifest.browser_specific_settings.gecko.data_collection_permissions.required.length !== 1 || manifest.browser_specific_settings.gecko.data_collection_permissions.required[0] !== "none") failures.push("gecko data_collection_permissions.required must be [\"none\"]");
 const supportedHosts = ["https://tracker.sondehub.org/*", "https://sondehub.org/*", "https://amateur.sondehub.org/*"];
-if (!Array.isArray(manifest.host_permissions) || manifest.host_permissions.length !== supportedHosts.length || supportedHosts.some((host) => !manifest.host_permissions.includes(host))) failures.push("host_permissions must contain exactly the three supported SondeHub hosts");
 if (!Array.isArray(manifest.content_scripts) || manifest.content_scripts.length !== 2) failures.push("exactly two content-script registrations are required");
 for (const script of manifest.content_scripts || []) {
   if (!Array.isArray(script.matches) || script.matches.length !== supportedHosts.length || supportedHosts.some((host) => !script.matches.includes(host))) failures.push("each content script must match exactly the three supported SondeHub hosts");
@@ -36,8 +38,13 @@ for (const file of files) {
   try { execFileSync(process.execPath, ["--check", path.join(root, file)], { stdio: "pipe" }); }
   catch (error) { failures.push(`${file}: ${error.stderr.toString().trim()}`); }
 }
+const networkApiPattern = /\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\b/;
+for (const file of files.filter((file) => file.startsWith("src/"))) {
+  const source = fs.readFileSync(path.join(root, file), "utf8");
+  if (networkApiPattern.test(source)) failures.push(`${file}: runtime code must not use network APIs`);
+}
 for (const asset of ["THIRD_PARTY_NOTICES.md", "third_party/heroicons/LICENSE", "third_party/heroicons/optimized/16/solid/map-pin.svg"]) {
-  if (!fs.existsSync(path.join(root, asset))) failures.push(`missing packaged third-party asset: ${asset}`);
+  if (!fs.existsSync(path.join(root, asset))) failures.push(`missing required third-party asset: ${asset}`);
 }
 if (failures.length) { console.error(failures.join("\n")); process.exit(1); }
 console.log(`Validated MV3 manifest and ${files.length} JavaScript files.`);

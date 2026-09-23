@@ -6,11 +6,11 @@ This is an independent community project. It is not affiliated with, sponsored b
 
 - **Firefox desktop:** 140 or newer
 - **Firefox for Android:** 142 or newer
-- **Current release:** 1.2.0
+- **Current release:** 1.2.1
 - **License:** MIT
 - **Status:** source and unsigned builds are available; persistent installation requires Mozilla signing
 
-The extension has no backend, account, analytics, telemetry, or extension-originated network requests. Locations are stored in Firefox with `browser.storage.local`.
+The extension has no backend, account, analytics, telemetry, remotely loaded resources, or extension-originated network requests. Locations are stored in Firefox with `browser.storage.local`.
 
 ## Contents
 
@@ -141,7 +141,7 @@ npm test
 npm run lint
 npm run package
 npm run verify:package
-python3 -m zipfile -t dist/sondehub-custom-locations-1.2.0.xpi
+python3 -m zipfile -t dist/sondehub-custom-locations-1.2.1.xpi
 npx --yes web-ext@latest lint --source-dir . \
   --ignore-files scripts/package.py scripts/verify-package.py
 ```
@@ -151,7 +151,7 @@ What these commands do:
 - `npm run verify:vendor` verifies the pinned Heroicons revision hashes, license hash, file types, and safe SVG boundary.
 - `npm run generate:icons` deterministically regenerates `src/shared/icons.js` from the vendored SVG files.
 - `npm test` runs the catalog, CSV, validation, protocol, storage, and map-adapter tests.
-- `npm run lint` checks the manifest, generated catalog, third-party provenance, required packaged assets, and JavaScript syntax.
+- `npm run lint` checks the manifest, generated catalog, third-party provenance, runtime network-API prohibition, local-only options page, required assets, and JavaScript syntax.
 - `npm run package` creates `dist/sondehub-custom-locations-<version>.xpi`.
 - `npm run verify:package` builds the XPI twice, compares SHA-256 hashes, checks ZIP integrity and duplicate paths, and verifies the runtime-only allowlist and required licenses.
 - `web-ext lint` applies Mozilla's current add-on validation rules.
@@ -163,7 +163,7 @@ What these commands do:
 The packaging script:
 
 - Reads the version from `manifest.json`.
-- Includes only the manifest, runtime icons and source, project license, third-party notices, and vendored Heroicons.
+- Includes only 14 allowlisted runtime and license files. The 316 source SVGs stay in the repository for provenance checks but are not duplicated in the XPI because the generated local catalog already contains them.
 - Refuses symlinks and special files.
 - Sorts archive paths and uses fixed ZIP timestamps for deterministic output.
 - Produces an **unsigned** XPI. Renaming or building an XPI does not sign it.
@@ -267,9 +267,10 @@ On a real device, verify:
 
 ## Privacy and permissions
 
-- **Permission:** `storage`, used only for browser-local locations.
-- **Host access:** exactly `tracker.sondehub.org`, `sondehub.org`, and `amateur.sondehub.org`.
-- No backend, account, analytics, telemetry, tracking, cloud database, CDN, or extension-originated network requests.
+- **API permission:** only `storage`, used only for browser-local locations.
+- **Page access:** static content scripts match only `tracker.sondehub.org`, `sondehub.org`, and `amateur.sondehub.org`; no separate `host_permissions` block is requested.
+- No backend, account, analytics, telemetry, tracking, cloud database, CDN, external options-page links, remotely loaded resources, or extension-originated network requests.
+- Extension pages use a restrictive content security policy with `connect-src 'none'` and local-only scripts and styles.
 - The AMO data-collection declaration is `none`.
 - Deleting all locations removes the extension's `locations` storage key.
 - Firefox profile backup, sync, clearing, and removal behavior remains controlled by Firefox.
