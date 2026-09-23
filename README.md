@@ -6,7 +6,7 @@ This is an independent community project. It is not affiliated with, sponsored b
 
 - **Firefox desktop:** 140 or newer
 - **Firefox for Android:** 142 or newer
-- **Current release:** 1.6.0
+- **Current version:** 1.6.3
 - **License:** MIT
 - **Status:** source and unsigned builds are available; persistent installation requires Mozilla signing
 
@@ -23,6 +23,7 @@ The extension has no project-operated backend, account, analytics, telemetry, re
 - [Firefox for Android](#firefox-for-android)
 - [Troubleshooting](#troubleshooting)
 - [Privacy and permissions](#privacy-and-permissions)
+- [Privacy policy](PRIVACY.md)
 - [Architecture and repository layout](#architecture-and-repository-layout)
 - [Limitations](#limitations)
 - [Contributing and security](#contributing-and-security)
@@ -151,7 +152,7 @@ npm test
 npm run lint
 npm run package
 npm run verify:package
-python3 -m zipfile -t dist/sondehub-custom-locations-1.6.0.xpi
+python3 -m zipfile -t dist/sondehub-custom-locations-1.6.3.xpi
 npx --yes web-ext@latest lint --source-dir . \
   --ignore-files scripts/package.py scripts/verify-package.py
 ```
@@ -195,6 +196,8 @@ Recommended release procedure:
 4. Submit that XPI to AMO and complete the required listing, privacy, and compatibility information.
 5. Test the Mozilla-signed artifact in a clean Firefox profile.
 6. Tag the exact source commit and attach only the verified signed or unsigned artifact with an unambiguous filename.
+
+The repository's detailed pre-submission and post-signing checks are in [`PUBLISHING.md`](PUBLISHING.md). The public privacy statement is in [`PRIVACY.md`](PRIVACY.md).
 
 For a Mozilla-signed self-distributed desktop build, open `about:addons`, use the gear menu, choose **Install Add-on From File…**, and select the signed XPI. Standard Firefox Release and Beta do not normally install an unsigned XPI persistently.
 
@@ -259,7 +262,7 @@ On a real device, verify:
 
 ### CSV import fails or skips rows
 
-- Confirm the file includes `name,lat,long` headers. Optional overrides use `icon,icon_color,background_color`.
+- Confirm the file includes `name,lat,long` headers. Optional overrides use `icon,icon_color,background_color,marker_diameter`.
 - Confirm any supplied colors are six-digit hexadecimal values beginning with `#`.
 - Check latitude and longitude ranges and the 120-character name limit.
 - Review the options-page skipped-row report; valid rows still import unless the CSV header or quoting is fatally invalid.
@@ -286,12 +289,12 @@ On a real device, verify:
 - Extension pages use a restrictive content security policy with `connect-src 'none'` and local-only scripts and styles.
 - The AMO data-collection declaration is `none`.
 - Default appearance and location records synchronize through the same browser-managed storage area.
-- Deleting all locations removes location records but preserves the selected default icon and colors.
+- Deleting all locations removes location records but preserves the selected default icon, colors, and circle diameter.
 - Firefox account, profile backup, Sync, clearing, and removal behavior remains controlled by Firefox.
 
 ### Supported-page boundary
 
-To render a marker with the site's existing Leaflet map, the extension passes the marker name, icon key, latitude, and longitude into the supported page realm. The page can inspect that displayed data while its tab is open. Do not store a location that must remain secret from the supported SondeHub page.
+To render a marker with the site's existing Leaflet map, the extension passes the marker name, icon key, colors, circle diameter, latitude, and longitude into the supported page realm. The page can inspect that displayed data while its tab is open. Do not store a location that must remain secret from the supported SondeHub page.
 
 The bridge is one-way: it sends bounded, validated display snapshots and does not accept page-triggered requests for storage reads.
 
@@ -305,7 +308,7 @@ Firefox isolates normal content scripts from page globals such as `window.map` a
 User-facing popup text is created with DOM text APIs. SVG is selected only from the generated, fixed Heroicons allowlist; CSV, storage, and page input cannot supply SVG markup.
 
 ```text
-.github/workflows/     Public CI checks
+.github/workflows/     GitHub Actions checks
 examples/              Example CSV input
 icons/                 Extension application icon
 scripts/               Catalog generation, provenance, lint, and packaging
@@ -337,6 +340,8 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for development and pull-request requir
 See [`SUPPORT.md`](SUPPORT.md) before opening a usage, compatibility, or feature issue.
 
 Report vulnerabilities according to [`SECURITY.md`](SECURITY.md), not through a public issue.
+
+See [`PRIVACY.md`](PRIVACY.md) for the public privacy statement and [`PUBLISHING.md`](PUBLISHING.md) for the release checklist.
 
 Release history is recorded in [`CHANGELOG.md`](CHANGELOG.md).
 

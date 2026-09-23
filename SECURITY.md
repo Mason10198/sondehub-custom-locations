@@ -12,7 +12,7 @@ Include the affected version, Firefox platform, reproduction steps, and the secu
 
 ## Security boundaries
 
-The extension intentionally passes only marker names, icon keys, colors, and coordinates into a supported SondeHub page so Leaflet can render them. That displayed data is inspectable by the page while the tab is open. The extension does not treat the supported page realm as a secret boundary.
+The extension intentionally passes only marker names, icon keys, colors, circle diameters, and coordinates into a supported SondeHub page so Leaflet can render them. That displayed data is inspectable by the page while the tab is open. The extension does not treat the supported page realm as a secret boundary.
 
 Expected invariants include:
 

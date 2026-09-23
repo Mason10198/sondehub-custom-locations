@@ -7,6 +7,7 @@ All notable changes to this project are documented here.
 ## [1.6.3] - 2026-09-23
 
 - Reduced the default marker circle diameter from 26 to 22 pixels while retaining the 16-pixel icon glyph.
+- Updated release, privacy, security-boundary, and Mozilla publishing documentation.
 
 ## [1.6.2] - 2026-09-23
 
@@ -77,7 +78,10 @@ All notable changes to this project are documented here.
 - Added bounded one-way Firefox isolated-world to page-world transport.
 - Added deterministic unsigned XPI packaging and desktop Firefox verification.
 
-[Unreleased]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.6.3...HEAD
+[1.6.3]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.6.2...v1.6.3
+[1.6.2]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.6.1...v1.6.2
+[1.6.1]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.3.0...v1.4.0
@@ -85,4 +89,4 @@ All notable changes to this project are documented here.
 [1.2.1]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/Mason10198/sondehub-custom-locations/releases/tag/v1.0.0
+[1.0.0]: https://github.com/Mason10198/sondehub-custom-locations/tree/v1.0.0
