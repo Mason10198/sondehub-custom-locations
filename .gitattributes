@@ -1,0 +1,2 @@
+# Vendored Heroicons are integrity-checked byte-for-byte.
+third_party/heroicons/** text eol=lf
