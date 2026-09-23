@@ -102,7 +102,7 @@
     if (headerIndex === -1) return { locations: [], skipped: [{ row: 1, reason: "CSV is empty" }] };
     const header = rows[headerIndex].values.map((field) => field.trim().toLowerCase());
     const required = ["name", "icon", "lat", "long"];
-    const columns = required.concat(["icon_color", "background_color"]);
+    const columns = required.concat(["icon_color", "background_color", "sondehub_csv_version"]);
     const indices = Object.fromEntries(columns.map((column) => [column, header.indexOf(column)]));
     const missing = required.filter((column) => indices[column] === -1);
     if (missing.length) return { locations: [], skipped: [{ row: 1, reason: `Missing required column(s): ${missing.join(", ")}` }], fatal: "Invalid CSV header" };
@@ -112,8 +112,10 @@
       const record = rows[physicalIndex];
       const row = record.values;
       if (!row.some((field) => field.trim() !== "")) continue;
+      const rawName = row[indices.name];
+      const exportedName = indices.sondehub_csv_version !== -1 && row[indices.sondehub_csv_version] === "1" && rawName.startsWith("'") ? rawName.slice(1) : rawName;
       const result = validateLocation({
-        name: row[indices.name],
+        name: exportedName,
         icon: row[indices.icon],
         iconColor: indices.icon_color === -1 ? "" : row[indices.icon_color],
         backgroundColor: indices.background_color === -1 ? "" : row[indices.background_color],
@@ -126,5 +128,23 @@
     return { locations, skipped };
   }
 
-  return { DEFAULT_ICON, DEFAULT_ICON_COLOR, DEFAULT_BACKGROUND_COLOR, ICONS, normalizeIcon, normalizeColor, createId, validateLocation, parseCsv, importCsv };
+  function csvField(value) {
+    const text = String(value == null ? "" : value);
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  }
+
+  function exportCsv(value) {
+    const header = ["name", "icon", "icon_color", "background_color", "lat", "long", "sondehub_csv_version"];
+    const rows = Array.isArray(value) ? value.reduce((all, item) => {
+      const result = validateLocation(item, { allowGeneratedId: false });
+      if (result.ok) {
+        const safeName = /^[=+\-@']/.test(result.value.name) ? `'${result.value.name}` : result.value.name;
+        all.push([safeName, result.value.icon, result.value.iconColor, result.value.backgroundColor, result.value.lat, result.value.long, "1"]);
+      }
+      return all;
+    }, []) : [];
+    return `${[header].concat(rows).map((row) => row.map(csvField).join(",")).join("\r\n")}\r\n`;
+  }
+
+  return { DEFAULT_ICON, DEFAULT_ICON_COLOR, DEFAULT_BACKGROUND_COLOR, ICONS, normalizeIcon, normalizeColor, createId, validateLocation, parseCsv, importCsv, exportCsv };
 });

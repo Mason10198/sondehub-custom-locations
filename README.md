@@ -1,16 +1,16 @@
 # SondeHub Custom Locations
 
-A local-only Firefox WebExtension that adds persistent personal markers to the public [SondeHub Tracker](https://tracker.sondehub.org/) and [SondeHub Amateur](https://amateur.sondehub.org/) maps.
+A privacy-focused Firefox WebExtension that adds persistent personal markers to the public [SondeHub Tracker](https://tracker.sondehub.org/) and [SondeHub Amateur](https://amateur.sondehub.org/) maps.
 
 This is an independent community project. It is not affiliated with, sponsored by, or endorsed by SondeHub.
 
 - **Firefox desktop:** 140 or newer
 - **Firefox for Android:** 142 or newer
-- **Current release:** 1.2.1
+- **Current release:** 1.3.0
 - **License:** MIT
 - **Status:** source and unsigned builds are available; persistent installation requires Mozilla signing
 
-The extension has no backend, account, analytics, telemetry, remotely loaded resources, or extension-originated network requests. Locations are stored in Firefox with `browser.storage.local`.
+The extension has no project-operated backend, account, analytics, telemetry, remotely loaded resources, or direct network requests. Desktop locations use Firefox's browser-managed `storage.sync`; Firefox may send that data through the user's Firefox Sync account. Android uses the same API locally but does not synchronize extension data, so CSV backup and restore is provided for every platform.
 
 ## Contents
 
@@ -32,7 +32,9 @@ The extension has no backend, account, analytics, telemetry, remotely loaded res
 
 - Runs only on `tracker.sondehub.org`, `sondehub.org`, and `amateur.sondehub.org`.
 - Adds markers in a separate Leaflet overlay named **Custom locations**.
-- Adds, edits, and deletes browser-local locations from a responsive options page.
+- Adds, edits, and deletes locations from a responsive options page.
+- Synchronizes locations between desktop Firefox profiles signed in to the same Firefox account with extension syncing enabled.
+- Exports and imports portable CSV backups on desktop and mobile.
 - Lets each marker use a custom icon color and background color, defaulting to black on yellow.
 - Imports CSV files with required `name,icon,lat,long` columns and optional color columns in **add** or **replace all** mode.
 - Reports skipped CSV rows with their source row number and validation error.
@@ -122,7 +124,10 @@ Import behavior:
 - Colors must be six-digit hexadecimal values such as `#ffffff` or `#2563eb`.
 - Missing or blank colors use the defaults: black icon (`#000000`) and yellow background (`#facc15`).
 - Rows containing a nonblank invalid color are skipped and reported.
-- There is currently no CSV export function. Keep the source CSV separately if it is your backup.
+- **Export CSV backup** writes every saved location, icon, color, and coordinate to a portable CSV file.
+- Exported CSV files can be imported on desktop or Android in either add or replace mode.
+- CSV backups intentionally create new internal IDs when imported; display data is preserved.
+- Exports include a `sondehub_csv_version` column and safely prefix spreadsheet-formula-leading names; re-import removes only that export escape and restores the exact name.
 
 ## Build and verify
 
@@ -141,7 +146,7 @@ npm test
 npm run lint
 npm run package
 npm run verify:package
-python3 -m zipfile -t dist/sondehub-custom-locations-1.2.1.xpi
+python3 -m zipfile -t dist/sondehub-custom-locations-1.3.0.xpi
 npx --yes web-ext@latest lint --source-dir . \
   --ignore-files scripts/package.py scripts/verify-package.py
 ```
@@ -188,7 +193,7 @@ Recommended release procedure:
 
 For a Mozilla-signed self-distributed desktop build, open `about:addons`, use the gear menu, choose **Install Add-on From File…**, and select the signed XPI. Standard Firefox Release and Beta do not normally install an unsigned XPI persistently.
 
-The committed Gecko ID is stable and should not change after publishing. The manifest declares `browser_specific_settings.gecko.data_collection_permissions.required: ["none"]` because the extension does not collect or transmit user data.
+The committed Gecko ID is stable and should not change after publishing. The manifest declares `browser_specific_settings.gecko.data_collection_permissions.required: ["none"]` because the developer does not collect or receive user data. Firefox Sync transport is controlled by Firefox and the user's Mozilla account, not by this extension or its developer.
 
 Never commit AMO API credentials, signing keys, browser profiles, or real personal-location exports.
 
@@ -221,6 +226,8 @@ Mozilla also documents installing a **signed** self-distributed XPI from a file 
 
 Firefox for Android Nightly also supports AMO custom collections for development and testing. Follow Mozilla's current [custom extension collections documentation](https://extensionworkshop.com/documentation/develop/developing-extensions-for-firefox-for-android/#testing-extension-collection) rather than assuming the same flow is available in Release or Beta.
 
+Firefox for Android does not synchronize WebExtension `storage.sync` data. Use **Export CSV backup** on another device and import that file on Android, or export from Android and import it elsewhere.
+
 On a real device, verify:
 
 1. Options-page add, edit, import, and delete behavior.
@@ -237,7 +244,7 @@ On a real device, verify:
 - Check the map's layer control for **Custom locations**. If the site does not expose a layer selector, the extension still attempts to add its layer directly.
 - Open the options page and confirm the location has valid decimal coordinates.
 - Reload the temporary add-on in `about:debugging`, then reload the map tab.
-- Only the first 250 saved locations render in a map tab; all records remain editable in the options page.
+- The extension stores and renders at most 250 locations. It also checks Firefox Sync's per-item and total byte quotas before writing, so unusually large migrated records or long escaped names may reach the storage limit sooner.
 
 ### Changes do not update an open map
 
@@ -267,13 +274,14 @@ On a real device, verify:
 
 ## Privacy and permissions
 
-- **API permission:** only `storage`, used only for browser-local locations.
+- **API permission:** only `storage`, used for browser-managed desktop sync and local Android storage.
 - **Page access:** static content scripts match only `tracker.sondehub.org`, `sondehub.org`, and `amateur.sondehub.org`; no separate `host_permissions` block is requested.
-- No backend, account, analytics, telemetry, tracking, cloud database, CDN, external options-page links, remotely loaded resources, or extension-originated network requests.
+- No project backend, developer account system, analytics, telemetry, tracking, cloud database, CDN, external options-page links, remotely loaded resources, or direct extension network requests.
+- On desktop, Firefox itself may transmit extension storage through the user's Firefox Sync account. The extension does not choose the server, hold credentials, or receive the data.
 - Extension pages use a restrictive content security policy with `connect-src 'none'` and local-only scripts and styles.
 - The AMO data-collection declaration is `none`.
-- Deleting all locations removes the extension's `locations` storage key.
-- Firefox profile backup, sync, clearing, and removal behavior remains controlled by Firefox.
+- Deleting all locations removes all of the extension's synchronized location records.
+- Firefox account, profile backup, Sync, clearing, and removal behavior remains controlled by Firefox.
 
 ### Supported-page boundary
 
@@ -285,7 +293,7 @@ The bridge is one-way: it sends bounded, validated display snapshots and does no
 
 Firefox isolates normal content scripts from page globals such as `window.map` and `window.L`. The extension uses two narrow components:
 
-1. `src/content/storage-bridge.js` runs in the isolated extension world, reads `browser.storage.local`, and sends only validated display fields through a JSON-string `CustomEvent`.
+1. `src/content/storage-bridge.js` runs in the isolated extension world, reads the validated `browser.storage.sync` repository, and sends only display fields through a JSON-string `CustomEvent`.
 2. `src/content/main-adapter.js` runs in Firefox's MAIN content-script world, waits for SondeHub's Leaflet map, and owns one independent `L.LayerGroup`.
 
 User-facing popup text is created with DOM text APIs. SVG is selected only from the generated, fixed Heroicons allowlist; CSV, storage, and page input cannot supply SVG markup.
@@ -308,9 +316,10 @@ third_party/heroicons/ Pinned Heroicons source and upstream license
 
 - SondeHub Tracker and Amateur are third-party applications. A change to their Leaflet globals or layer control may require an adapter update.
 - Address geocoding is not included; enter decimal coordinates directly.
-- `browser.storage.local` persists with the Firefox profile. Removing the extension or clearing its data may remove saved locations.
-- Storage mutations are serialized within one extension context. Simultaneous writes from separate extension contexts can still conflict because `storage.local` has no compare-and-swap operation.
-- A supported map tab renders at most 250 saved locations to bound page-world parsing and Leaflet work. All saved locations remain manageable in the options page.
+- Firefox Sync must be enabled for extensions on each desktop profile. Propagation is asynchronous and requires the same signed extension ID.
+- Firefox for Android does not synchronize WebExtension storage; use CSV backup and restore there.
+- Storage mutations are serialized within one extension context and single-marker changes write only that marker's Sync record. Concurrent edits to the same marker on different desktops can still resolve by Firefox Sync's conflict behavior.
+- The extension stores and renders at most 250 locations, checks Firefox Sync's per-item and total byte quotas before each write, and bounds page-world and Leaflet work.
 - Firefox for iOS does not run Firefox WebExtensions. Supporting iPhone or iPad would require a separate Safari Web Extension and Xcode application.
 
 ## Contributing and security

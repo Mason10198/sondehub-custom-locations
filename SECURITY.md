@@ -16,7 +16,7 @@ The extension intentionally passes only marker names, icon keys, colors, and coo
 
 Expected invariants include:
 
-- No backend, analytics, telemetry, or extension-originated network requests.
+- No project backend, analytics, telemetry, or direct extension network requests. Desktop synchronization is performed only by Firefox Sync under the user's Firefox account.
 - Only the documented `storage` API permission and static content-script matches for the three exact SondeHub hosts; no separate `host_permissions` declaration.
 - A one-way, bounded, exact-schema storage-to-page bridge.
 - User text rendered with DOM text APIs rather than HTML.

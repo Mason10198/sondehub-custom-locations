@@ -1,6 +1,6 @@
 # Contributing
 
-Contributions are welcome. Keep changes focused, preserve the extension's local-only privacy model, and include tests for behavior changes.
+Contributions are welcome. Keep changes focused, preserve the extension's no-backend privacy model and browser-managed sync boundary, and include tests for behavior changes.
 
 By submitting a contribution, you confirm that the work is your own or that you have the right to submit it under the project's MIT license. Preserve copyright, license, and third-party attribution notices.
 

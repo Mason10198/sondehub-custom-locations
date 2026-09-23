@@ -4,6 +4,15 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-22
+
+- Added browser-managed Firefox Sync for desktop locations with automatic migration from the previous local storage layout.
+- Added portable CSV export and retained CSV add/replace import for desktop and Android backup and transfer.
+- Stored each synchronized location in a separate bounded record, enforced Firefox Sync's per-item and total byte quotas, and capped the collection at 250 locations.
+- Limited routine Sync writes to records that actually changed so edits on one desktop do not republish stale copies of unrelated markers.
+- Made CSV exports safe to open in spreadsheets while preserving exact names when re-imported.
+- Documented that Firefox for Android does not synchronize WebExtension storage and requires CSV transfer.
+
 ## [1.2.1] - 2026-09-22
 
 - Removed the redundant `host_permissions` declaration, leaving `storage` as the only extension API permission and exact static content-script matches as the only page access.
@@ -33,7 +42,8 @@ All notable changes to this project are documented here.
 - Added bounded one-way Firefox isolated-world to page-world transport.
 - Added deterministic unsigned XPI packaging and desktop Firefox verification.
 
-[Unreleased]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.0.0...v1.1.0

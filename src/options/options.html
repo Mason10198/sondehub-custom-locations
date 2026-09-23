@@ -8,7 +8,7 @@
 </head>
 <body>
   <main>
-    <header><h1>SondeHub Custom Locations</h1><p>Private markers stored only in this browser.</p></header>
+    <header><h1>SondeHub Custom Locations</h1><p>Firefox Sync keeps desktop locations aligned. CSV backup and restore works on desktop and mobile.</p></header>
     <section class="card" aria-labelledby="add-title">
       <h2 id="add-title">Add or edit location</h2>
       <form id="location-form">
@@ -46,7 +46,10 @@
       <p id="form-message" class="message" role="status" aria-live="polite"></p>
     </section>
     <section class="card" aria-labelledby="import-title">
-      <h2 id="import-title">Import CSV</h2>
+      <h2 id="import-title">Backup and restore</h2>
+      <p>Desktop Firefox synchronizes saved locations through your Firefox account. Firefox for Android does not synchronize extension storage, so use CSV export and import when moving data to or from mobile.</p>
+      <button id="export-button" type="button">Export CSV backup</button>
+      <h3>Import CSV</h3>
       <p>Required columns: <code>name,icon,lat,long</code>. Optional color columns: <code>icon_color,background_color</code>. Colors use six-digit hex values such as <code>#000000</code>.</p>
       <input id="csv-file" type="file" accept=".csv,text/csv">
       <fieldset><legend>Import mode</legend><label><input type="radio" name="import-mode" value="add" checked> Add to existing</label><label><input type="radio" name="import-mode" value="replace"> Replace all existing</label></fieldset>

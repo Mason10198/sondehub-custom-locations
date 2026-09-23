@@ -67,3 +67,24 @@ test("rejects headers missing required columns", () => {
   assert.equal(result.fatal, "Invalid CSV header");
   assert.match(result.skipped[0].reason, /icon/);
 });
+test("exports portable CSV backups that round-trip all display fields", () => {
+  const csv = api.exportCsv([
+    { id: "one", name: 'Launch, "North"', icon: "radio", iconColor: "#ffffff", backgroundColor: "#2563eb", lat: 35.5, long: -97.5 },
+    { id: "two", name: "Second\nLine", icon: "home", lat: 1, long: 2 }
+  ]);
+  assert.equal(csv.startsWith("name,icon,icon_color,background_color,lat,long,sondehub_csv_version\r\n"), true);
+  const imported = api.importCsv(csv);
+  assert.equal(imported.skipped.length, 0);
+  assert.deepEqual(imported.locations.map(({ id, ...location }) => location), [
+    { name: 'Launch, "North"', icon: "16-solid/radio", iconColor: "#ffffff", backgroundColor: "#2563eb", lat: 35.5, long: -97.5 },
+    { name: "Second\nLine", icon: "16-solid/home", iconColor: "#000000", backgroundColor: "#facc15", lat: 1, long: 2 }
+  ]);
+});
+
+test("exports spreadsheet-safe names without changing names on re-import", () => {
+  const names = ["=1+1", "+SUM(1,2)", "-2+3", "@command", "'literal"];
+  const csv = api.exportCsv(names.map((name, index) => ({ id: String(index), name, lat: 1, long: 2 })));
+  const rows = api.parseCsv(csv);
+  assert.deepEqual(rows.slice(1).map((row) => row[0]), names.map((name) => `'${name}`));
+  assert.deepEqual(api.importCsv(csv).locations.map((location) => location.name), names);
+});

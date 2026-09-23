@@ -6,30 +6,42 @@ const path = require("node:path");
 const vm = require("node:vm");
 require("../src/shared/locations.js");
 const protocol = require("../src/shared/protocol.js");
+const storageRepository = require("../src/shared/storage.js");
 
-test("storage bridge pushes minimal snapshots and ignores page request events", async () => {
+function area(initial) {
+  let data = structuredClone(initial);
+  return {
+    async get(key) { return key == null ? structuredClone(data) : (Object.hasOwn(data, key) ? { [key]: structuredClone(data[key]) } : {}); },
+    async set(value) { data = { ...data, ...structuredClone(value) }; },
+    async remove(key) { for (const item of Array.isArray(key) ? key : [key]) delete data[item]; }
+  };
+}
+
+test("storage bridge pushes minimal sync snapshots and ignores page request events", async () => {
   const listeners = new Map();
   const events = [];
-  let reads = 0;
   const document = {
     addEventListener(name, listener) { listeners.set(name, listener); },
     dispatchEvent(event) { events.push(event); }
   };
+  const onChanged = { addListener(listener) { this.listener = listener; } };
   const browser = {
     storage: {
-      local: { async get() { reads += 1; return { locations: [{ id: "private", name: "Home", icon: "pin", lat: 1, long: 2 }] }; } },
-      onChanged: { addListener(listener) { this.listener = listener; } }
+      sync: area({ "location:private": { order: 0, location: { id: "private", name: "Home", icon: "pin", lat: 1, long: 2 } } }),
+      local: area({}),
+      onChanged
     }
   };
-  const context = { browser, document, SondeHubLocationProtocol: protocol, CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init.detail; } }, Object, console };
+  const context = { browser, document, SondeHubLocationProtocol: protocol, SondeHubLocationRepository: storageRepository, CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init.detail; } }, Object, console };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../src/content/storage-bridge.js"), "utf8"), context);
   await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(reads, 1);
   assert.equal(listeners.has("sondehub-custom-locations:request"), false);
   assert.equal(typeof events[0].detail, "string");
   const locations = protocol.message(events[0].detail);
   assert.deepEqual(locations, [{ name: "Home", icon: "16-solid/map-pin", iconColor: "#000000", backgroundColor: "#facc15", lat: 1, long: 2 }]);
   assert.equal(Object.hasOwn(locations[0], "id"), false);
-  // A page can dispatch this name, but the bridge deliberately has no listener.
   assert.equal(listeners.get("sondehub-custom-locations:request"), undefined);
+  onChanged.listener({ "location:private": { newValue: {} } }, "sync");
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(events.length, 2);
 });

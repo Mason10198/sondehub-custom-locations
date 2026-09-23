@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const repository = SondeHubLocationRepository.createRepository(browser.storage.local);
+  const repository = SondeHubLocationRepository.createRepository(browser.storage.sync, browser.storage.local);
   const form = document.getElementById("location-form");
   const fields = { id: document.getElementById("location-id"), name: document.getElementById("name"), icon: document.getElementById("icon"), iconColor: document.getElementById("icon-color"), backgroundColor: document.getElementById("background-color"), lat: document.getElementById("lat"), long: document.getElementById("long") };
   const list = document.getElementById("locations");
@@ -14,7 +14,10 @@
   const MAX_VISIBLE_ICON_RESULTS = 100;
 
   function setMessage(target, text, kind) { target.textContent = text; target.className = `message ${kind || ""}`; }
-  function storageError(target, operation) { setMessage(target, `Unable to ${operation}. Please try again.`, "error"); }
+  function storageError(target, operation, error) {
+    const known = error && typeof error.message === "string" && (error.message.startsWith("Firefox Sync") || error.message.startsWith("A location is too large for Firefox Sync"));
+    setMessage(target, known ? error.message : `Unable to ${operation}. Please try again.`, "error");
+  }
   function svgNode(icon) {
     const parsedSvg = new DOMParser().parseFromString(SondeHubIcons.svgFor(icon.key), "image/svg+xml").documentElement;
     return document.importNode(parsedSvg, true);
@@ -138,8 +141,8 @@
       resetForm();
       setMessage(message, "Location saved.", "success");
       await render();
-    } catch (_) {
-      storageError(message, "save this location");
+    } catch (error) {
+      storageError(message, "save this location", error);
     }
   });
   document.getElementById("cancel-edit").addEventListener("click", () => { resetForm(); setMessage(message, "", ""); });
@@ -160,8 +163,23 @@
       }
       const skipped = parsed.skipped.length ? ` Skipped ${parsed.skipped.length}: ${parsed.skipped.map((item) => `row ${item.row} (${item.reason})`).join("; ")}` : "";
       setMessage(report, `Imported ${parsed.locations.length} location${parsed.locations.length === 1 ? "" : "s"}.${skipped}`, parsed.skipped.length ? "error" : "success");
+    } catch (error) {
+      storageError(report, "import locations", error);
+    }
+  });
+  document.getElementById("export-button").addEventListener("click", async () => {
+    try {
+      const locations = await repository.getAll();
+      const blob = new Blob([SondeHubLocations.exportCsv(locations)], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `sondehub-custom-locations-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+      setMessage(report, `Exported ${locations.length} location${locations.length === 1 ? "" : "s"}.`, "success");
     } catch (_) {
-      storageError(report, "import locations");
+      storageError(report, "export locations");
     }
   });
   document.getElementById("delete-all").addEventListener("click", async () => {
@@ -169,6 +187,8 @@
     try { await repository.clear(); resetForm(); await render(); }
     catch (_) { storageError(message, "delete all locations"); }
   });
-  browser.storage.onChanged.addListener((changes, area) => { if (area === "local" && Object.hasOwn(changes, "locations")) void render(); });
+  browser.storage.onChanged.addListener((changes, area) => {
+    if ((area === "sync" || area === "local") && SondeHubLocationRepository.isLocationChange(changes)) void render();
+  });
   void render();
 })();
