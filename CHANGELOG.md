@@ -11,7 +11,8 @@ All notable changes to this project are documented here.
 - Added public-repository badges and reviewer-source verification to CI.
 - Replaced the page-world Leaflet bridge with an isolated closed-shadow marker layer so saved marker values are no longer exposed to SondeHub page scripts.
 - Mounted the private marker host in Leaflet's map pane and mirrored the active tile container's zoom transform, eliminating sampled viewport tracking so markers share the map's compositor-driven pan and zoom motion.
-- Hid marker names by default, restored hover/tap/keyboard name reveal, and added a synchronized **Always show names** setting with CSV backup support.
+- Hid marker names by default, added hover-only name reveal, and added a synchronized **Always show names** setting with CSV backup support.
+- Placed custom locations below SondeHub sondes and chase cars, and restyled the layer toggle as a native-looking control below the time-window selector.
 - Added version 5 CSV backup metadata for the global label-visibility setting while retaining compatibility with versions 1–4.
 - Declared Firefox Sync coordinate transport as required `locationInfo` in Firefox's built-in data consent metadata.
 

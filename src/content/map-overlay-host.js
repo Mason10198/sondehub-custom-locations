@@ -8,6 +8,7 @@
   const HOST_ID = "sondehub-custom-locations-private-layer";
   const TOGGLE_ID = "sondehub-custom-locations-toggle";
   const MAX_LOCATIONS = 250;
+  const CUSTOM_MARKER_Z_INDEX = 550;
 
   const MOUNT_POLL_MS = 500;
 
@@ -123,6 +124,7 @@
     let shadow = null;
     let markerRoot = null;
     let toggle = null;
+    let toggleControl = null;
     let anchor = null;
     let locations = [];
     let settings = { showLabels: false };
@@ -134,7 +136,7 @@
     function createShadow() {
       shadow = host.attachShadow({ mode: "closed" });
       const style = doc.createElement("style");
-      style.textContent = `:host{all:initial;position:absolute!important;left:0!important;top:0!important;width:0!important;height:0!important;overflow:visible!important;pointer-events:none!important;z-index:1000!important}.markers{position:absolute;left:0;top:0;width:0;height:0;overflow:visible;pointer-events:none}.marker{position:absolute;left:0;top:0;display:grid;place-items:center;box-sizing:border-box;border:2px solid var(--marker-color);border-radius:50%;outline:none;background:var(--marker-background);color:var(--marker-color);box-shadow:0 1px 3px #0008;cursor:pointer;pointer-events:auto;will-change:transform;contain:layout style}.marker:focus-visible{outline:3px solid #fff;outline-offset:2px}.marker svg{display:block;width:var(--glyph-size);height:var(--glyph-size)}.label{position:absolute;left:50%;top:calc(100% + 4px);max-width:180px;padding:2px 5px;overflow:hidden;border-radius:3px;background:rgb(17 24 39 / 88%);color:#fff;font:600 11px/1.25 system-ui,sans-serif;text-overflow:ellipsis;text-shadow:0 1px 1px #000;white-space:nowrap;transform:translateX(-50%);opacity:0;visibility:hidden;pointer-events:none}.labels-always .label,.marker:hover .label,.marker:focus-visible .label,.marker.revealed .label{opacity:1;visibility:visible}`;
+      style.textContent = `:host{all:initial;position:absolute!important;left:0!important;top:0!important;width:0!important;height:0!important;overflow:visible!important;pointer-events:none!important;z-index:${CUSTOM_MARKER_Z_INDEX}!important}.markers{position:absolute;left:0;top:0;width:0;height:0;overflow:visible;pointer-events:none}.marker{position:absolute;left:0;top:0;display:grid;place-items:center;box-sizing:border-box;border:2px solid var(--marker-color);border-radius:50%;background:var(--marker-background);color:var(--marker-color);box-shadow:0 1px 3px #0008;cursor:grab;pointer-events:auto;will-change:transform;contain:layout style}.marker:active{cursor:grabbing}.marker svg{display:block;width:var(--glyph-size);height:var(--glyph-size)}.label{position:absolute;left:50%;top:calc(100% + 4px);max-width:180px;padding:2px 5px;overflow:hidden;border-radius:3px;background:rgb(17 24 39 / 88%);color:#fff;font:600 11px/1.25 system-ui,sans-serif;text-overflow:ellipsis;text-shadow:0 1px 1px #000;white-space:nowrap;transform:translateX(-50%);opacity:0;visibility:hidden;pointer-events:none}.labels-always .label,.marker:hover .label{opacity:1;visibility:visible}`;
       markerRoot = doc.createElement("div");
       markerRoot.className = "markers";
       shadow.append(style, markerRoot);
@@ -162,10 +164,6 @@
       for (const location of locations.slice(0, MAX_LOCATIONS)) {
         const marker = doc.createElement("div");
         marker.className = "marker";
-        marker.tabIndex = 0;
-        marker.setAttribute("role", "button");
-        marker.setAttribute("aria-label", location.name);
-        marker.setAttribute("aria-expanded", "false");
         marker.style.width = `${location.markerDiameter}px`;
         marker.style.height = `${location.markerDiameter}px`;
         marker.style.setProperty("--marker-color", location.iconColor);
@@ -178,22 +176,6 @@
         label.className = "label";
         label.textContent = location.name;
         marker.append(icon, label);
-        marker.addEventListener("click", (event) => {
-          event.stopPropagation();
-          const reveal = !marker.classList.contains("revealed");
-          for (const other of markerRoot.querySelectorAll(".marker.revealed")) {
-            other.classList.remove("revealed");
-            other.setAttribute("aria-expanded", "false");
-          }
-          marker.classList.toggle("revealed", reveal);
-          marker.setAttribute("aria-expanded", String(reveal));
-          if (!reveal) marker.blur();
-        });
-        marker.addEventListener("keydown", (event) => {
-          if (event.key !== "Enter" && event.key !== " ") return;
-          event.preventDefault();
-          marker.click();
-        });
         fragment.append(marker);
       }
       markerRoot.replaceChildren(fragment);
@@ -226,6 +208,26 @@
       }
     }
 
+    function paintToggle(hovered = false) {
+      if (!toggle) return;
+      const background = visible ? (hovered ? "#008dab" : "#00a6ca") : (hovered ? "#f4f4f4" : "#ffffff");
+      toggle.style.setProperty("background", background, "important");
+      toggle.style.setProperty("border-color", visible ? "#008dab" : "#cccccc", "important");
+      toggle.style.setProperty("color", visible ? "#ffffff" : "#888888", "important");
+      toggle.title = visible ? "Hide custom markers" : "Show custom markers";
+    }
+
+    function placeToggle() {
+      if (!mapElement || !toggleControl || !toggle) return;
+      const timeSelector = doc.getElementById("timeperiod");
+      const timeControl = timeSelector?.closest(".leaflet-control");
+      const controlCorner = timeControl?.parentElement || mapElement.querySelector(".leaflet-top.leaflet-left");
+      if (timeControl && toggleControl.previousElementSibling !== timeControl) timeControl.insertAdjacentElement("afterend", toggleControl);
+      else if (controlCorner && toggleControl.parentElement !== controlCorner) controlCorner.append(toggleControl);
+      const selectorWidth = timeSelector?.getBoundingClientRect().width;
+      if (selectorWidth) toggle.style.setProperty("width", `${Math.ceil(selectorWidth)}px`, "important");
+    }
+
     function mount() {
       const candidate = doc.getElementById("map");
       if (!candidate) return false;
@@ -235,23 +237,34 @@
         host.id = HOST_ID;
         host.className = "leaflet-zoom-animated";
 
-        for (const [name, value] of Object.entries({ position: "absolute", left: "0", top: "0", width: "0", height: "0", overflow: "visible", "pointer-events": "none", "z-index": "625" })) host.style.setProperty(name, value, "important");
+        for (const [name, value] of Object.entries({ position: "absolute", left: "0", top: "0", width: "0", height: "0", overflow: "visible", "pointer-events": "none", "z-index": String(CUSTOM_MARKER_Z_INDEX) })) host.style.setProperty(name, value, "important");
         createShadow();
+        toggleControl = doc.createElement("div");
+        toggleControl.className = "leaflet-control sondehub-custom-locations-control";
+        toggleControl.style.setProperty("clear", "both", "important");
+        toggleControl.style.setProperty("pointer-events", "auto", "important");
         toggle = doc.createElement("button");
         toggle.id = TOGGLE_ID;
         toggle.type = "button";
-        toggle.textContent = "Custom markers";
-        toggle.title = "Show or hide custom markers";
+        toggle.textContent = "Markers";
         toggle.setAttribute("aria-pressed", "true");
-        for (const [name, value] of Object.entries({ position: "absolute", top: "76px", right: "10px", margin: "0", padding: "7px 10px", border: "2px solid rgba(0,0,0,.25)", "border-radius": "4px", background: "#fff", color: "#111", "font": "600 12px/1.2 system-ui,sans-serif", cursor: "pointer", "z-index": "1001" })) toggle.style.setProperty(name, value, "important");
+        toggle.setAttribute("aria-label", "Show or hide custom markers");
+        for (const [name, value] of Object.entries({ display: "block", height: "30px", margin: "0", padding: "0 9px", border: "1px solid #008dab", "border-radius": "4px", "box-sizing": "border-box", font: '13px "HelveticaNeue", "Helvetica Neue", Helvetica, Arial, sans-serif', cursor: "pointer", "box-shadow": "none", "white-space": "nowrap" })) toggle.style.setProperty(name, value, "important");
+        toggle.addEventListener("mouseenter", () => paintToggle(true));
+        toggle.addEventListener("mouseleave", () => paintToggle(false));
+        toggle.addEventListener("pointerdown", (event) => event.stopPropagation());
         toggle.addEventListener("click", () => {
           visible = !visible;
           host.style.setProperty("visibility", visible ? "visible" : "hidden", "important");
           toggle.setAttribute("aria-pressed", String(visible));
+          paintToggle(false);
         });
-        mapElement.append(toggle);
+        toggleControl.append(toggle);
+        paintToggle(false);
+        placeToggle();
         loadLocations();
       }
+      placeToggle();
       observer?.disconnect();
       observer = new view.MutationObserver((records) => {
         if (anchor && records.some((record) => record.target === anchor.container && record.type === "attributes" && record.attributeName === "style")) syncAnchorTransform();
@@ -266,7 +279,8 @@
       if ((areaName === "sync" || areaName === "local") && repositories.isLocationChange(changes)) loadLocations();
     });
     mountTimer = view.setInterval(() => {
-      if (!mapElement?.isConnected || !host?.isConnected || !toggle?.isConnected) mount();
+      if (!mapElement?.isConnected || !host?.isConnected || !toggleControl?.isConnected) mount();
+      else placeToggle();
     }, MOUNT_POLL_MS);
     mount();
     return Object.freeze({
@@ -275,7 +289,7 @@
         if (pendingFrame !== null) view.cancelAnimationFrame(pendingFrame);
         observer?.disconnect();
         host?.remove();
-        toggle?.remove();
+        toggleControl?.remove();
         view.__sondeHubCustomLocationsPrivateLayer = false;
       },
       reanchor,
@@ -285,5 +299,5 @@
     });
   }
 
-  return Object.freeze({ HOST_ID, TOGGLE_ID, MAX_LOCATIONS, transformParts, tileCoordinates, localPosition, chooseAnchor, worldPixel, projectToAnchor, glyphSize, markerTransform, start });
+  return Object.freeze({ HOST_ID, TOGGLE_ID, MAX_LOCATIONS, CUSTOM_MARKER_Z_INDEX, transformParts, tileCoordinates, localPosition, chooseAnchor, worldPixel, projectToAnchor, glyphSize, markerTransform, start });
 });

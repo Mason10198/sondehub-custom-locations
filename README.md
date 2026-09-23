@@ -99,9 +99,9 @@ This launches a disposable Firefox development profile and is also temporary.
 3. Enter a location name and decimal latitude and longitude. Enable only the appearance overrides that location needs.
 4. Select **Save location**.
 5. Open or return to a supported SondeHub map.
-6. Use the **Custom markers** button on the map to show or hide the private marker layer.
+6. Use the **Markers** button below the time-window selector to show or hide the private marker layer.
 
-Marker names are hidden by default. Hover a marker, focus it with the keyboard, or tap/click it to reveal the name. Enable **Always show names** under **Marker defaults** to keep every name visible. The rest of the marker layer remains pointer-transparent so normal map dragging, zooming, and touch gestures continue to work.
+Marker names are hidden by default and appear while hovering a marker. Enable **Always show names** under **Marker defaults** to keep every name visible. Custom locations stay below SondeHub sondes and chase cars, and marker gestures continue through to the map for normal dragging and zooming.
 
 Editing or deleting a location updates supported SondeHub tabs without a reload. **Delete all** requires confirmation.
 

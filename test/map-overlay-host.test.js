@@ -54,15 +54,19 @@ test("uses compositor transforms and the compact default glyph", () => {
   assert.equal(layer.markerTransform({ x: 400.5, y: 300.25 }), "translate3d(400.5px, 300.25px, 0) translate(-50%, -50%)");
 });
 
-test("marker names are interaction-only by default and can be always visible", () => {
+test("marker names are hover-only by default and can be always visible", () => {
   const source = fs.readFileSync(path.join(__dirname, "../src/content/map-overlay-host.js"), "utf8");
   assert.match(source, /labels-always/);
-  assert.match(source, /marker\.tabIndex = 0/);
-  assert.match(source, /marker\.addEventListener\("click"/);
   assert.match(source, /\.marker:hover \.label/);
-  assert.match(source, /\.marker:focus-visible \.label/);
-  assert.match(source, /\.marker\.revealed \.label/);
   assert.match(source, /pointer-events:none}.labels-always/);
-  assert.doesNotMatch(source, /addEventListener\("pointerdown"/);
-  assert.match(source, /aria-expanded/);
+  assert.doesNotMatch(source, /marker\.tabIndex|aria-expanded|marker\.addEventListener\("click"|marker\.addEventListener\("keydown"|\.marker\.revealed|\.marker:focus-visible/);
+  assert.doesNotMatch(source, /marker\.addEventListener\("pointerdown"/);
+});
+
+test("custom markers stay below SondeHub markers and the toggle mounts below the time selector", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../src/content/map-overlay-host.js"), "utf8");
+  assert.match(source, /CUSTOM_MARKER_Z_INDEX = 550/);
+  assert.match(source, /getElementById\("timeperiod"\)/);
+  assert.match(source, /insertAdjacentElement\("afterend", toggleControl\)/);
+  assert.match(source, /leaflet-control sondehub-custom-locations-control/);
 });
