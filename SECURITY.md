@@ -12,13 +12,13 @@ Include the affected version, Firefox platform, reproduction steps, and the secu
 
 ## Security boundaries
 
-Saved marker names, icon keys, colors, circle diameters, and coordinates remain inside extension contexts. An isolated content script sends only page-visible viewport geometry into a transparent extension-origin iframe. Browser same-origin protections prevent SondeHub page scripts from reading the iframe's marker DOM.
+Saved marker names, icon keys, colors, circle diameters, and coordinates remain inside Firefox's isolated content-script world. Markers are rendered in a closed shadow root mounted in Leaflet's map pane, where they inherit panning and mirror the active tile-container zoom transform without exposing their private DOM to SondeHub page scripts.
 
 Expected invariants include:
 
 - No project backend, analytics, telemetry, or direct extension network requests. Desktop synchronization is performed only by Firefox Sync under the user's Firefox account.
 - Only the documented `storage` API permission and static content-script matches for the three exact SondeHub hosts; no separate `host_permissions` declaration.
 - No MAIN-world script, page-DOM event, page-readable marker node, or storage-to-page data bridge.
-- A bounded viewport-only message into an extension-origin iframe that never posts marker data to its parent.
+- No cross-realm message bridge; the isolated layer reads storage and renders directly into its retained closed shadow root.
 - User text rendered with DOM text APIs rather than HTML.
 - SVG markup selected only from the pinned, generated Heroicons allowlist.

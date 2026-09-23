@@ -25,7 +25,7 @@ Use the responsive options page to:
 
 Only `name`, `lat`, and `long` are required when importing CSV files. Appearance columns are optional.
 
-The extension has no project-operated server, analytics, telemetry, advertising, remotely loaded resources, or direct network requests. Its only extension API permission is `storage`. Saved marker data is rendered inside a same-origin-protected extension iframe and is not passed to SondeHub page scripts.
+The extension has no project-operated server, analytics, telemetry, advertising, remotely loaded resources, or direct network requests. Its only extension API permission is `storage`. Saved marker data is rendered by an isolated content script inside a closed shadow root and is not passed to SondeHub page scripts.
 
 This is an independent community project and is not affiliated with, sponsored by, or endorsed by SondeHub.
 
@@ -57,7 +57,7 @@ Use synthetic marker names and coordinates. Do not upload real personal location
 - There is no project backend, developer account system, analytics, telemetry, advertising, remote code, remote assets, or direct extension networking.
 - Extension pages use a local-only CSP containing `connect-src 'none'`.
 - Desktop synchronization uses Firefox-managed `browser.storage.sync`. The developer does not operate the transport or receive synchronized data. Firefox for Android retains the same data locally, and CSV provides manual portability.
-- An isolated content script derives only map viewport geometry from page-visible Leaflet tiles. A transparent extension-origin iframe privately reads extension storage and renders markers; SondeHub page scripts cannot read its marker DOM. The iframe never posts marker data to its parent.
+- An isolated content script privately reads extension storage and renders markers inside a closed shadow root. Its host is mounted in Leaflet's map pane, inherits native panning, and mirrors the active tile-container zoom transform, while SondeHub page scripts cannot inspect the marker tree. No marker-data message bridge exists.
 - The only bundled third-party assets are Heroicons v2.2.0 Micro icons from commit `0435d4ca364a608cc75e2f8683d374e55abbae26`, under the MIT license. Provenance and hashes are in `THIRD_PARTY_NOTICES.md`.
 - `src/shared/icons.js` is generated deterministically from the vendored Heroicons source with `npm run generate:icons`. `npm run verify:vendor` verifies the pinned source tree.
 - `python3 scripts/package.py` creates the exact-allowlisted unsigned XPI. `npm run verify:package` builds it twice and checks archive paths, bytes, metadata, integrity, and reproducibility.

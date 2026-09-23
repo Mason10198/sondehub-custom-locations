@@ -9,8 +9,8 @@ All notable changes to this project are documented here.
 - Added a deterministic Mozilla reviewer source archive with byte-for-byte XPI reproduction checks.
 - Added prepared AMO listing/reviewer text, public screenshots, a code of conduct, and a pull-request template.
 - Added public-repository badges and reviewer-source verification to CI.
-- Replaced the page-world Leaflet bridge with a private extension-origin overlay so saved marker values are no longer exposed to SondeHub page scripts.
-- Made the private overlay event-driven and compositor-accelerated so marker nodes persist and track map pans and fractional zoom states without repeated DOM reconstruction or constant polling.
+- Replaced the page-world Leaflet bridge with an isolated closed-shadow marker layer so saved marker values are no longer exposed to SondeHub page scripts.
+- Mounted the private marker host in Leaflet's map pane and mirrored the active tile container's zoom transform, eliminating sampled viewport tracking so markers share the map's compositor-driven pan and zoom motion.
 - Declared Firefox Sync coordinate transport as required `locationInfo` in Firefox's built-in data consent metadata.
 
 ## [1.6.3] - 2026-09-23

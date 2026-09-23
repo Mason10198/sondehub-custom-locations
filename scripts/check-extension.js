@@ -40,15 +40,15 @@ if (!Array.isArray(manifest.content_scripts) || manifest.content_scripts.length 
 for (const script of manifest.content_scripts || []) {
   if (!Array.isArray(script.matches) || script.matches.length !== supportedHosts.length || supportedHosts.some((host) => !script.matches.includes(host))) failures.push("each content script must match exactly the three supported SondeHub hosts");
   if (script.world === "MAIN") failures.push("stored marker data must never enter a MAIN-world content script");
-  if (!Array.isArray(script.js) || script.js.length !== 1 || script.js[0] !== "src/content/map-overlay-host.js") failures.push("the isolated content script must load only the private overlay host");
+  const expectedScripts = ["src/shared/icons.js", "src/shared/locations.js", "src/shared/storage.js", "src/content/map-overlay-host.js"];
+  if (!Array.isArray(script.js) || script.js.length !== expectedScripts.length || expectedScripts.some((file, index) => script.js[index] !== file)) failures.push("the isolated content script must load the validated private Leaflet layer dependencies in order");
 }
-const accessible = manifest.web_accessible_resources;
-if (!Array.isArray(accessible) || accessible.length !== 1 || !Array.isArray(accessible[0].resources) || accessible[0].resources.length !== 1 || accessible[0].resources[0] !== "src/overlay/overlay.html" || !Array.isArray(accessible[0].matches) || supportedHosts.some((host) => !accessible[0].matches.includes(host))) failures.push("only the private overlay entry page may be web-accessible on the supported hosts");
+if (Object.hasOwn(manifest, "web_accessible_resources")) failures.push("private marker rendering must not expose web-accessible extension resources");
 try { execFileSync(process.execPath, [path.join(root, "scripts/generate-icon-catalog.js"), "--check"], { stdio: "pipe" }); }
 catch (error) { failures.push(`generated icon catalog: ${error.stderr.toString().trim() || error.message}`); }
 try { execFileSync(process.execPath, [path.join(root, "scripts/verify-vendored-assets.js")], { stdio: "pipe" }); }
 catch (error) { failures.push(`vendored asset provenance: ${error.stderr.toString().trim() || error.message}`); }
-const files = ["src/shared/icons.js", "src/shared/locations.js", "src/shared/storage.js", "src/content/map-overlay-host.js", "src/overlay/overlay.js", "src/options/options.js", "scripts/generate-icon-catalog.js", "scripts/verify-vendored-assets.js"];
+const files = ["src/shared/icons.js", "src/shared/locations.js", "src/shared/storage.js", "src/content/map-overlay-host.js", "src/options/options.js", "scripts/generate-icon-catalog.js", "scripts/verify-vendored-assets.js"];
 for (const file of files) {
   try { execFileSync(process.execPath, ["--check", path.join(root, file)], { stdio: "pipe" }); }
   catch (error) { failures.push(`${file}: ${error.stderr.toString().trim()}`); }
@@ -61,9 +61,7 @@ for (const file of files.filter((file) => file.startsWith("src/"))) {
 const optionsSource = fs.readFileSync(path.join(root, "src/options/options.js"), "utf8");
 if (!optionsSource.includes("browser.storage.sync") || !optionsSource.includes("SondeHubLocations.exportCsv")) failures.push("options must use Firefox Sync and local CSV export");
 const hostSource = fs.readFileSync(path.join(root, "src/content/map-overlay-host.js"), "utf8");
-if (/browser\.storage|createRepository|getResolved|CustomEvent|dispatchEvent/.test(hostSource)) failures.push("page-side overlay host must never read or dispatch stored marker data");
-const overlaySource = fs.readFileSync(path.join(root, "src/overlay/overlay.js"), "utf8");
-if (!overlaySource.includes("repository.getResolved()") || /parent\.postMessage/.test(overlaySource)) failures.push("extension-origin overlay must read marker storage privately and never post marker data to the parent page");
+if (!hostSource.includes('attachShadow({ mode: "closed" })') || !hostSource.includes("repository.getResolved()") || /postMessage|CustomEvent|dispatchEvent/.test(hostSource)) failures.push("isolated marker layer must use a closed shadow root, read validated storage privately, and expose no page message bridge");
 for (const asset of ["THIRD_PARTY_NOTICES.md", "third_party/heroicons/LICENSE", "third_party/heroicons/optimized/16/solid/map-pin.svg"]) {
   if (!fs.existsSync(path.join(root, asset))) failures.push(`missing required third-party asset: ${asset}`);
 }

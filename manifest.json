@@ -7,14 +7,8 @@
   "content_scripts": [
     {
       "matches": ["https://tracker.sondehub.org/*", "https://sondehub.org/*", "https://amateur.sondehub.org/*"],
-      "js": ["src/content/map-overlay-host.js"],
+      "js": ["src/shared/icons.js", "src/shared/locations.js", "src/shared/storage.js", "src/content/map-overlay-host.js"],
       "run_at": "document_idle"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["src/overlay/overlay.html"],
-      "matches": ["https://tracker.sondehub.org/*", "https://sondehub.org/*", "https://amateur.sondehub.org/*"]
     }
   ],
   "options_ui": {

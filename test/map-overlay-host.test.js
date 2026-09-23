@@ -3,46 +3,53 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const host = require("../src/content/map-overlay-host.js");
+const layer = require("../src/content/map-overlay-host.js");
 
 function node(transform, parentElement = null, extra = {}) {
-  return { style: { transform, width: extra.width || "" }, parentElement, ...extra };
+  return { style: { transform, width: extra.width || "", zIndex: extra.zIndex || "" }, parentElement, ...extra };
 }
 
-test("infers the Leaflet viewport from page-visible XYZ tile geometry", () => {
-  const map = { clientWidth: 700, clientHeight: 759, querySelectorAll() { return [tile]; } };
-  const mapPane = node("translate3d(210px, 257px, 0px)", map);
-  const tilePane = node("", mapPane);
-  const layer = node("", tilePane);
-  const tileContainer = node("translate3d(0px, 0px, 0px) scale(1)", layer);
-  const tile = node("translate3d(-65px, -224px, 0px)", tileContainer, { src: "https://tile.openstreetmap.org/5/15/9.png", width: 256 });
+const view = { getComputedStyle(element) { return { transform: element.style?.transform || "none", display: "block", visibility: "visible", opacity: "1", zIndex: element.style?.zIndex || "0" }; } };
+
+test("derives a private-layer anchor from visible XYZ tile geometry", () => {
+  const container = node("", null, { zIndex: "18" });
+  const tile = node("translate3d(13px, 44px, 0px)", container, { src: "https://tile.openstreetmap.org/5/15/9.png", width: 256 });
   tile.style.width = "256px";
-  const viewport = host.inferViewport(map, { getComputedStyle: () => ({ transform: "none" }) });
-  assert.equal(viewport.type, host.MESSAGE_TYPE);
-  assert.equal(viewport.zoom, 5);
-  assert.equal(viewport.width, 700);
-  assert.equal(viewport.height, 759);
-  assert.ok(Math.abs(viewport.centerLat - 53.45) < 0.1, viewport.centerLat);
-  assert.ok(Math.abs(viewport.centerLong - (-2.24)) < 0.1, viewport.centerLong);
+  container.querySelectorAll = () => [tile];
+  const map = { querySelectorAll() { return [container]; } };
+  const anchor = layer.chooseAnchor(map, view);
+  assert.equal(anchor.container, container);
+  assert.equal(anchor.zoom, 5);
+  assert.equal(anchor.tileSize, 256);
+  assert.equal(anchor.originX, 13 - 15 * 256);
+  assert.equal(anchor.originY, 44 - 9 * 256);
 });
 
-test("tracks zoom-animation scale and rejects malformed tile URLs", () => {
-  const map = { clientWidth: 700, clientHeight: 759, querySelectorAll() { return [scaled, malformed]; } };
-  const mapPane = node("translate3d(0px, 0px, 0px)", map);
-  const scaledParent = node("scale(1.5)", mapPane);
-  const scaled = node("translate3d(0px, 0px, 0px)", scaledParent, { src: "https://tile.openstreetmap.org/5/15/9.png", width: 256 });
-  scaled.style.width = "256px";
-  const malformed = node("translate3d(0px, 0px, 0px)", mapPane, { src: "https://example.invalid/no-tile.png", width: 256 });
-  malformed.style.width = "256px";
-  const viewport = host.inferViewport(map, { getComputedStyle: () => ({ transform: "none" }) });
-  assert.ok(Math.abs(viewport.zoom - (5 + Math.log2(1.5))) < 1e-9);
-  map.querySelectorAll = () => [malformed];
-  assert.equal(host.inferViewport(map, { getComputedStyle: () => ({ transform: "none" }) }), null);
+test("projects saved coordinates into the tile container coordinate system", () => {
+  const anchor = { zoom: 5, tileSize: 256, originX: 13 - 15 * 256, originY: 44 - 9 * 256 };
+  const point = layer.projectToAnchor(53.47497, -2.35, anchor);
+  assert.ok(Math.abs(point.x - 215.5244) < 0.01, point.x);
+  assert.ok(Math.abs(point.y - 390.5) < 0.01, point.y);
 });
 
-test("isolated host never reads or dispatches stored location data", () => {
+test("supports tile URLs and transform formats used by Leaflet", () => {
+  assert.deepEqual(layer.tileCoordinates("https://tile.openstreetmap.org/12/2021/1320.png"), { z: 12, x: 2021, y: 1320 });
+  assert.equal(layer.tileCoordinates("https://example.invalid/no-tile.png"), null);
+  assert.deepEqual(layer.transformParts("translate3d(12px, -8px, 0px) scale(1.5)"), { x: 12, y: -8, scale: 1.5 });
+  assert.deepEqual(layer.transformParts("matrix(2, 0, 0, 2, 7, 9)"), { x: 7, y: 9, scale: 2 });
+});
+
+test("keeps marker rendering private while inheriting Leaflet transforms", () => {
   const source = fs.readFileSync(path.join(__dirname, "../src/content/map-overlay-host.js"), "utf8");
-  assert.doesNotMatch(source, /browser\.storage|createRepository|getResolved|CustomEvent|dispatchEvent/);
-  assert.match(source, /src\/overlay\/overlay\.html/);
-  assert.match(source, /"pointer-events": "none"/);
+  assert.match(source, /attachShadow\(\{ mode: "closed" \}\)/);
+  assert.match(source, /mapPane\.append\(host\)/);
+  assert.match(source, /anchor\.container\.style\.transform/);
+  assert.match(source, /repository\.getResolved\(\)/);
+  assert.doesNotMatch(source, /postMessage|CustomEvent|dispatchEvent|world:\s*["']MAIN/);
+});
+
+test("uses compositor transforms and the compact default glyph", () => {
+  assert.equal(layer.glyphSize(22), 16);
+  assert.equal(layer.glyphSize(44), 27);
+  assert.equal(layer.markerTransform({ x: 400.5, y: 300.25 }), "translate3d(400.5px, 300.25px, 0) translate(-50%, -50%)");
 });

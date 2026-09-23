@@ -54,7 +54,7 @@ This checklist prepares a source commit and unsigned XPI for Mozilla review. Moz
 
 - The extension has no runtime npm dependencies, project backend, analytics, telemetry, remote code, remote assets, or direct network requests.
 - Extension-page CSP includes `connect-src 'none'`.
-- Marker data is rendered in a same-origin-protected extension iframe. The isolated page host handles only nonpersonal map viewport geometry and never reads storage.
+- Marker data is read only in Firefox's isolated content-script world and rendered in a closed shadow root. The host inherits Leaflet's tile transforms without exposing marker values through page events, page-readable nodes, or messages.
 - Content scripts are limited to the three exact SondeHub hosts in `manifest.json`.
 - The only bundled third-party library/assets are Heroicons v2.2.0 Micro icons. Their pinned commit, license, hashes, and verification procedure are documented in `THIRD_PARTY_NOTICES.md`.
 - `src/shared/icons.js` is deterministically generated from the vendored Heroicons tree. Run `npm run verify:vendor` and `npm run generate:icons` to verify or reproduce it.

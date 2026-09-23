@@ -14,9 +14,9 @@ The extension stores marker names, coordinates, appearance settings, and interna
 
 ## Supported SondeHub pages
 
-Saved marker names, coordinates, icon keys, colors, and circle diameters are rendered inside a transparent extension-origin iframe. SondeHub page scripts cannot read that iframe's marker content under browser same-origin protections. The page receives no stored marker values.
+Saved marker names, coordinates, icon keys, colors, and circle diameters are rendered by an isolated content script inside a closed shadow root. The private host inherits Leaflet's own tile transforms, while SondeHub page scripts cannot inspect its marker tree or receive stored marker values.
 
-An isolated content script reads only the map's page-visible tile geometry so the extension iframe can align its private marker overlay. The page can detect or hide the generic iframe and toggle button, but the overlay never posts marker data to the parent page.
+The isolated content script reads page-visible tile geometry only to anchor the private host in Leaflet's transform container. The page can detect or hide the generic host and toggle button, but it cannot inspect the closed marker tree and no marker values are posted or dispatched into the page world.
 
 ## Permissions
 

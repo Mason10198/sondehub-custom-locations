@@ -1,15 +1,15 @@
-/* Isolated world: hosts a private extension-origin marker overlay above the Leaflet map. */
-(function exposeMapOverlayHost(root, factory) {
-  const api = factory();
+/* Isolated world: renders private markers inside Leaflet's own transform layer. */
+(function exposePrivateLeafletLayer(root, factory) {
+  const api = factory(root.SondeHubIcons, root.SondeHubLocationRepository);
   if (typeof module === "object" && module.exports) module.exports = api;
   else api.start();
-})(typeof globalThis !== "undefined" ? globalThis : this, function mapOverlayHostFactory() {
+})(typeof globalThis !== "undefined" ? globalThis : this, function privateLeafletLayerFactory(iconCatalog, repositoryApi) {
   "use strict";
-  const OVERLAY_ID = "sondehub-custom-locations-private-overlay";
+  const HOST_ID = "sondehub-custom-locations-private-layer";
   const TOGGLE_ID = "sondehub-custom-locations-toggle";
-  const MESSAGE_TYPE = "sondehub-custom-locations:viewport";
+  const MAX_LOCATIONS = 250;
+  const MIN_LABEL_ZOOM = 8;
   const MOUNT_POLL_MS = 500;
-  const ACTIVE_TRACKING_MS = 350;
 
   function transformParts(value) {
     if (!value || value === "none") return { x: 0, y: 0, scale: 1 };
@@ -17,8 +17,8 @@
     if (match) return { x: Number(match[3]), y: Number(match[4]), scale: Number(match[1]) === Number(match[2]) ? Number(match[1]) : NaN };
     match = value.match(/^matrix3d\((.+)\)$/i);
     if (match) {
-      const numbers = match[1].split(",").map(Number);
-      return numbers.length === 16 ? { x: numbers[12], y: numbers[13], scale: numbers[0] === numbers[5] ? numbers[0] : NaN } : { x: 0, y: 0, scale: NaN };
+      const values = match[1].split(",").map(Number);
+      return values.length === 16 ? { x: values[12], y: values[13], scale: values[0] === values[5] ? values[0] : NaN } : { x: 0, y: 0, scale: NaN };
     }
     match = value.match(/translate3d\(\s*([-+\d.e]+)px,\s*([-+\d.e]+)px,\s*[-+\d.e]+px\s*\)/i) || value.match(/translate\(\s*([-+\d.e]+)px,\s*([-+\d.e]+)px\s*\)/i);
     const scaleMatch = value.match(/scale\(\s*([-+\d.e]+)\s*\)/i);
@@ -31,8 +31,8 @@
       for (let index = 0; index <= segments.length - 3; index += 1) {
         const z = Number(segments[index]);
         const x = Number(segments[index + 1]);
-        const yMatch = segments[index + 2].match(/^(\d+)/);
-        const y = yMatch ? Number(yMatch[1]) : NaN;
+        const match = segments[index + 2].match(/^(\d+)/);
+        const y = match ? Number(match[1]) : NaN;
         if (Number.isInteger(z) && z >= 0 && z <= 24 && Number.isInteger(x) && Number.isInteger(y)) return { z, x, y };
       }
     } catch (_) {
@@ -41,25 +41,21 @@
     return null;
   }
 
-  function nodeTransform(node, view) {
-    const inline = node && node.style ? node.style.transform : "";
-    const computed = !inline && view && typeof view.getComputedStyle === "function" ? view.getComputedStyle(node).transform : "";
-    return transformParts(inline || computed);
-  }
-
-  function localTilePosition(tile, mapElement, view) {
+  function localPosition(node, ancestor, view) {
     const chain = [];
-    let current = tile;
-    while (current && current !== mapElement) {
+    let current = node;
+    while (current && current !== ancestor) {
       chain.push(current);
       current = current.parentElement;
     }
-    if (current !== mapElement) return null;
+    if (current !== ancestor) return null;
     let x = 0;
     let y = 0;
     let scale = 1;
-    for (const node of chain) {
-      const part = nodeTransform(node, view);
+    for (const element of chain) {
+      const inline = element.style ? element.style.transform : "";
+      const computed = !inline && view && typeof view.getComputedStyle === "function" ? view.getComputedStyle(element).transform : "";
+      const part = transformParts(inline || computed);
       if (!Number.isFinite(part.scale) || part.scale <= 0) return null;
       x = part.x + part.scale * x;
       y = part.y + part.scale * y;
@@ -68,170 +64,205 @@
     return { x, y, scale };
   }
 
-  function pixelToLongitude(pixel, scale) {
-    return (pixel / scale) * 360 - 180;
-  }
-
-  function pixelToLatitude(pixel, scale) {
-    const mercator = Math.PI - (2 * Math.PI * pixel) / scale;
-    return (180 / Math.PI) * Math.atan(Math.sinh(mercator));
-  }
-
-  function inferViewport(mapElement, view) {
+  function chooseAnchor(mapElement, view) {
     if (!mapElement || typeof mapElement.querySelectorAll !== "function") return null;
-    const width = Number(mapElement.clientWidth);
-    const height = Number(mapElement.clientHeight);
-    if (!(width > 0 && height > 0)) return null;
-    const tiles = mapElement.querySelectorAll("img.leaflet-tile");
-    for (const tile of tiles) {
-      const coordinates = tileCoordinates(tile.src || tile.getAttribute?.("src") || "");
-      if (!coordinates) continue;
-      const local = localTilePosition(tile, mapElement, view);
-      if (!local) continue;
-      const tileSize = Number.parseFloat(tile.style?.width || "") || Number(tile.width) || 256;
-      if (!(tileSize > 0)) continue;
-      const worldSize = tileSize * (2 ** coordinates.z) * local.scale;
-      const centerPixelX = coordinates.x * tileSize * local.scale - local.x + width / 2;
-      const centerPixelY = coordinates.y * tileSize * local.scale - local.y + height / 2;
-      const centerLat = pixelToLatitude(centerPixelY, worldSize);
-      const centerLong = pixelToLongitude(centerPixelX, worldSize);
-      if (![centerLat, centerLong].every(Number.isFinite) || centerLat < -90 || centerLat > 90) continue;
-      return Object.freeze({ type: MESSAGE_TYPE, version: 1, width, height, zoom: coordinates.z + Math.log2(local.scale), centerLat, centerLong });
+    const containers = [...mapElement.querySelectorAll(".leaflet-tile-container")].sort((left, right) => {
+      const leftZ = Number.parseInt(left.style?.zIndex || view.getComputedStyle(left).zIndex, 10) || 0;
+      const rightZ = Number.parseInt(right.style?.zIndex || view.getComputedStyle(right).zIndex, 10) || 0;
+      return rightZ - leftZ;
+    });
+    for (const container of containers) {
+      const allTiles = [...container.querySelectorAll("img.leaflet-tile")];
+      const visible = allTiles.filter((tile) => {
+        const style = view.getComputedStyle(tile);
+        return style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity || 1) > 0;
+      });
+      for (const tile of visible.length ? visible : allTiles) {
+        const coordinates = tileCoordinates(tile.src || tile.getAttribute?.("src") || "");
+        const position = coordinates ? localPosition(tile, container, view) : null;
+        const tileSize = Number.parseFloat(tile.style?.width || "") || Number(tile.width) || 256;
+        if (!coordinates || !position || !(tileSize > 0)) continue;
+        return Object.freeze({ container, zoom: coordinates.z, tileSize, originX: position.x - coordinates.x * tileSize, originY: position.y - coordinates.y * tileSize });
+      }
     }
     return null;
   }
 
-  function sameViewport(left, right) {
-    if (!left || !right) return false;
-    return left.width === right.width && left.height === right.height && Math.abs(left.zoom - right.zoom) < 1e-9 && Math.abs(left.centerLat - right.centerLat) < 1e-9 && Math.abs(left.centerLong - right.centerLong) < 1e-9;
+  function worldPixel(lat, long, zoom, tileSize = 256) {
+    const size = tileSize * (2 ** zoom);
+    const safeLat = Math.max(-85.05112878, Math.min(85.05112878, lat));
+    const sine = Math.sin((safeLat * Math.PI) / 180);
+    return { x: ((long + 180) / 360) * size, y: (0.5 - Math.log((1 + sine) / (1 - sine)) / (4 * Math.PI)) * size };
   }
 
-  function styleHost(element, styles) {
-    for (const [name, value] of Object.entries(styles)) element.style.setProperty(name, value, "important");
+  function projectToAnchor(lat, long, anchor) {
+    const point = worldPixel(lat, long, anchor.zoom, anchor.tileSize);
+    return Object.freeze({ x: anchor.originX + point.x, y: anchor.originY + point.y });
+  }
+
+  function glyphSize(diameter) {
+    return Math.min(diameter - 4, Math.max(16, Math.round(diameter * 0.62)));
+  }
+
+  function markerTransform(point) {
+    return `translate3d(${point.x}px, ${point.y}px, 0) translate(-50%, -50%)`;
   }
 
   function start(environment = {}) {
-    const doc = environment.document || (typeof document !== "undefined" ? document : null);
     const view = environment.window || (typeof window !== "undefined" ? window : null);
+    const doc = environment.document || (typeof document !== "undefined" ? document : null);
     const extension = environment.browser || (typeof browser !== "undefined" ? browser : null);
-    if (!doc || !view || !extension || view.__sondeHubCustomLocationsPrivateOverlay) return null;
-    view.__sondeHubCustomLocationsPrivateOverlay = true;
-    let overlay = null;
-    let toggle = null;
+    const icons = environment.iconCatalog || iconCatalog;
+    const repositories = environment.repositoryApi || repositoryApi;
+    if (!view || !doc || !extension || !icons || !repositories || view.__sondeHubCustomLocationsPrivateLayer) return null;
+    view.__sondeHubCustomLocationsPrivateLayer = true;
+
+    const repository = repositories.createRepository(extension.storage.sync, extension.storage.local);
     let mapElement = null;
-    let loaded = false;
+    let host = null;
+    let shadow = null;
+    let markerRoot = null;
+    let toggle = null;
+    let anchor = null;
+    let locations = [];
     let visible = true;
-    let lastViewport = null;
     let mountTimer = null;
-    let frame = null;
-    let activeUntil = 0;
-    let mapObserver = null;
-    let resizeObserver = null;
+    let observer = null;
+    let pendingFrame = null;
 
-    function now() {
-      return view.performance && typeof view.performance.now === "function" ? view.performance.now() : Date.now();
+    function createShadow() {
+      shadow = host.attachShadow({ mode: "closed" });
+      const style = doc.createElement("style");
+      style.textContent = `:host{all:initial;position:absolute!important;left:0!important;top:0!important;width:0!important;height:0!important;overflow:visible!important;pointer-events:none!important;z-index:1000!important}.markers{position:absolute;left:0;top:0;width:0;height:0;overflow:visible;pointer-events:none}.marker{position:absolute;left:0;top:0;display:grid;place-items:center;box-sizing:border-box;border:2px solid var(--marker-color);border-radius:50%;background:var(--marker-background);color:var(--marker-color);box-shadow:0 1px 3px #0008;will-change:transform;contain:layout style}.marker svg{display:block;width:var(--glyph-size);height:var(--glyph-size)}.label{position:absolute;left:50%;top:calc(100% + 4px);max-width:180px;padding:2px 5px;overflow:hidden;border-radius:3px;background:rgb(17 24 39 / 88%);color:#fff;font:600 11px/1.25 system-ui,sans-serif;text-overflow:ellipsis;text-shadow:0 1px 1px #000;white-space:nowrap;transform:translateX(-50%)}.labels-hidden .label{display:none}`;
+      markerRoot = doc.createElement("div");
+      markerRoot.className = "markers";
+      shadow.append(style, markerRoot);
     }
 
-    function sendViewport(force = false) {
-      if (!loaded || !overlay || !visible || !mapElement) return;
-      const viewport = inferViewport(mapElement, view);
-      if (!viewport || (!force && sameViewport(viewport, lastViewport))) return;
-      lastViewport = viewport;
-      // Only public map viewport geometry crosses this boundary. Extension-private marker data never does.
-      overlay.contentWindow.postMessage(viewport, "*");
+    function syncAnchorTransform() {
+      if (!anchor || !host) return;
+      host.style.setProperty("transform", anchor.container.style.transform || "translate3d(0px, 0px, 0px)", "important");
+      host.style.setProperty("transform-origin", "0 0", "important");
     }
 
-    function trackFrame() {
-      frame = null;
-      sendViewport();
-      if (now() < activeUntil) frame = view.requestAnimationFrame(trackFrame);
-    }
-
-    function activateTracking(duration = ACTIVE_TRACKING_MS) {
-      activeUntil = Math.max(activeUntil, now() + duration);
-      if (frame === null) frame = view.requestAnimationFrame(trackFrame);
-    }
-
-    function observeMap() {
-      mapObserver?.disconnect();
-      resizeObserver?.disconnect();
-      mapObserver = new view.MutationObserver((records) => {
-        const relevant = records.some((record) => {
-          const element = record.target;
-          if (!element || !element.classList) return false;
-          return element === mapElement || element.classList.contains("leaflet-map-pane") || element.classList.contains("leaflet-tile-pane") || element.classList.contains("leaflet-tile-container") || element.classList.contains("leaflet-tile");
-        });
-        if (relevant) activateTracking();
-      });
-      mapObserver.observe(mapElement, { attributes: true, attributeFilter: ["class", "src", "style"], childList: true, subtree: true });
-      if (typeof view.ResizeObserver === "function") {
-        resizeObserver = new view.ResizeObserver(() => activateTracking());
-        resizeObserver.observe(mapElement);
+    function positionMarkers() {
+      if (!anchor || !markerRoot) return;
+      markerRoot.classList.toggle("labels-hidden", anchor.zoom < MIN_LABEL_ZOOM);
+      const markers = markerRoot.children;
+      for (let index = 0; index < markers.length; index += 1) {
+        const location = locations[index];
+        if (location) markers[index].style.transform = markerTransform(projectToAnchor(location.lat, location.long, anchor));
       }
-      const trackingDurations = { pointerup: 800, pointercancel: 800, wheel: 800, transitionrun: 1200, transitionend: 150 };
-      for (const eventName of ["pointerdown", "pointermove", "pointerup", "pointercancel", "wheel", "transitionrun", "transitionend"]) {
-        mapElement.addEventListener(eventName, (event) => {
-          if (eventName === "pointermove" && event.buttons === 0) return;
-          activateTracking(trackingDurations[eventName] || ACTIVE_TRACKING_MS);
-        }, { passive: true });
+    }
+
+    function rebuildMarkers() {
+      if (!markerRoot) return;
+      const fragment = doc.createDocumentFragment();
+      for (const location of locations.slice(0, MAX_LOCATIONS)) {
+        const marker = doc.createElement("div");
+        marker.className = "marker";
+        marker.style.width = `${location.markerDiameter}px`;
+        marker.style.height = `${location.markerDiameter}px`;
+        marker.style.setProperty("--marker-color", location.iconColor);
+        marker.style.setProperty("--marker-background", location.backgroundColor);
+        marker.style.setProperty("--glyph-size", `${glyphSize(location.markerDiameter)}px`);
+        const icon = doc.createElement("span");
+        const parsed = new view.DOMParser().parseFromString(icons.svgFor(icons.normalizeIcon(location.icon)), "image/svg+xml").documentElement;
+        if (parsed.localName === "svg" && parsed.namespaceURI === "http://www.w3.org/2000/svg") icon.append(doc.importNode(parsed, true));
+        const label = doc.createElement("span");
+        label.className = "label";
+        label.textContent = location.name;
+        marker.append(icon, label);
+        fragment.append(marker);
+      }
+      markerRoot.replaceChildren(fragment);
+      positionMarkers();
+    }
+
+    function reanchor() {
+      pendingFrame = null;
+      if (!mapElement || mapElement.querySelector(".leaflet-map-pane.leaflet-zoom-anim")) return;
+      const next = chooseAnchor(mapElement, view);
+      if (!next) return;
+      anchor = next;
+      const mapPane = anchor.container.closest(".leaflet-map-pane");
+      if (!mapPane) return;
+      if (host.parentElement !== mapPane) mapPane.append(host);
+      syncAnchorTransform();
+      positionMarkers();
+    }
+
+    function scheduleReanchor() {
+      if (pendingFrame === null) pendingFrame = view.requestAnimationFrame(reanchor);
+    }
+
+    async function loadLocations() {
+      try {
+        locations = await repository.getResolved();
+        rebuildMarkers();
+      } catch (error) {
+        console.warn("SondeHub Custom Locations: unable to read saved locations", error);
       }
     }
 
     function mount() {
       const candidate = doc.getElementById("map");
       if (!candidate) return false;
-      if (mapElement === candidate && overlay && overlay.isConnected) return true;
       mapElement = candidate;
-      overlay = doc.createElement("iframe");
-      overlay.id = OVERLAY_ID;
-      overlay.title = "Private custom marker overlay";
-      overlay.setAttribute("aria-hidden", "true");
-      overlay.tabIndex = -1;
-      overlay.src = extension.runtime.getURL("src/overlay/overlay.html");
-      styleHost(overlay, { position: "absolute", inset: "0", width: "100%", height: "100%", border: "0", background: "transparent", "pointer-events": "none", "z-index": "625" });
-      overlay.addEventListener("load", () => { loaded = true; sendViewport(true); activateTracking(); }, { once: true });
-
-      toggle = doc.createElement("button");
-      toggle.id = TOGGLE_ID;
-      toggle.type = "button";
-      toggle.textContent = "Custom markers";
-      toggle.title = "Show or hide custom markers";
-      toggle.setAttribute("aria-pressed", "true");
-      styleHost(toggle, { position: "absolute", top: "76px", right: "10px", margin: "0", padding: "7px 10px", border: "2px solid rgba(0,0,0,.25)", "border-radius": "4px", background: "#fff", color: "#111", "font": "600 12px/1.2 system-ui,sans-serif", cursor: "pointer", "z-index": "1001" });
-      toggle.addEventListener("click", () => {
-        visible = !visible;
-        overlay.style.setProperty("visibility", visible ? "visible" : "hidden", "important");
-        toggle.setAttribute("aria-pressed", String(visible));
-        if (visible) sendViewport(true);
+      if (!host) {
+        host = doc.createElement("div");
+        host.id = HOST_ID;
+        host.className = "leaflet-zoom-animated";
+        host.setAttribute("aria-hidden", "true");
+        for (const [name, value] of Object.entries({ position: "absolute", left: "0", top: "0", width: "0", height: "0", overflow: "visible", "pointer-events": "none", "z-index": "625" })) host.style.setProperty(name, value, "important");
+        createShadow();
+        toggle = doc.createElement("button");
+        toggle.id = TOGGLE_ID;
+        toggle.type = "button";
+        toggle.textContent = "Custom markers";
+        toggle.title = "Show or hide custom markers";
+        toggle.setAttribute("aria-pressed", "true");
+        for (const [name, value] of Object.entries({ position: "absolute", top: "76px", right: "10px", margin: "0", padding: "7px 10px", border: "2px solid rgba(0,0,0,.25)", "border-radius": "4px", background: "#fff", color: "#111", "font": "600 12px/1.2 system-ui,sans-serif", cursor: "pointer", "z-index": "1001" })) toggle.style.setProperty(name, value, "important");
+        toggle.addEventListener("click", () => {
+          visible = !visible;
+          host.style.setProperty("visibility", visible ? "visible" : "hidden", "important");
+          toggle.setAttribute("aria-pressed", String(visible));
+        });
+        mapElement.append(toggle);
+        loadLocations();
+      }
+      observer?.disconnect();
+      observer = new view.MutationObserver((records) => {
+        if (anchor && records.some((record) => record.target === anchor.container && record.type === "attributes" && record.attributeName === "style")) syncAnchorTransform();
+        scheduleReanchor();
       });
-      mapElement.append(overlay, toggle);
-      observeMap();
-      activateTracking();
+      observer.observe(mapElement, { attributes: true, attributeFilter: ["class", "style", "src"], childList: true, subtree: true });
+      scheduleReanchor();
       return true;
     }
 
-    function tick() {
-      if (!overlay || !overlay.isConnected || !mapElement || !mapElement.isConnected) mount();
-    }
-
-    mountTimer = view.setInterval(tick, MOUNT_POLL_MS);
-    tick();
+    extension.storage.onChanged.addListener((changes, areaName) => {
+      if ((areaName === "sync" || areaName === "local") && repositories.isLocationChange(changes)) loadLocations();
+    });
+    mountTimer = view.setInterval(() => {
+      if (!mapElement?.isConnected || !host?.isConnected || !toggle?.isConnected) mount();
+    }, MOUNT_POLL_MS);
+    mount();
     return Object.freeze({
       stop() {
         if (mountTimer !== null) view.clearInterval(mountTimer);
-        if (frame !== null) view.cancelAnimationFrame(frame);
-        mapObserver?.disconnect();
-        resizeObserver?.disconnect();
-        overlay?.remove();
+        if (pendingFrame !== null) view.cancelAnimationFrame(pendingFrame);
+        observer?.disconnect();
+        host?.remove();
         toggle?.remove();
-        view.__sondeHubCustomLocationsPrivateOverlay = false;
+        view.__sondeHubCustomLocationsPrivateLayer = false;
       },
-      tick,
-      activateTracking,
-      get overlay() { return overlay; },
+      reanchor,
+      loadLocations,
+      get host() { return host; },
       get toggle() { return toggle; }
     });
   }
 
-  return Object.freeze({ MESSAGE_TYPE, OVERLAY_ID, TOGGLE_ID, transformParts, tileCoordinates, inferViewport, sameViewport, start });
+  return Object.freeze({ HOST_ID, TOGGLE_ID, MAX_LOCATIONS, MIN_LABEL_ZOOM, transformParts, tileCoordinates, localPosition, chooseAnchor, worldPixel, projectToAnchor, glyphSize, markerTransform, start });
 });

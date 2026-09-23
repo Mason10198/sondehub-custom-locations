@@ -36,7 +36,7 @@ The extension has no project-operated backend, account, analytics, telemetry, re
 ## Features
 
 - Runs only on `tracker.sondehub.org`, `sondehub.org`, and `amateur.sondehub.org`.
-- Draws markers in a private extension-origin overlay above the SondeHub map.
+- Draws markers in a private closed-shadow layer that inherits SondeHub's native Leaflet transforms.
 - Adds, edits, and deletes locations from a responsive options page.
 - Synchronizes locations between desktop Firefox profiles signed in to the same Firefox account with extension syncing enabled.
 - Exports and imports portable CSV backups on desktop and mobile.
@@ -99,7 +99,7 @@ This launches a disposable Firefox development profile and is also temporary.
 3. Enter a location name and decimal latitude and longitude. Enable only the appearance overrides that location needs.
 4. Select **Save location**.
 5. Open or return to a supported SondeHub map.
-6. Use the **Custom markers** button on the map to show or hide the private overlay.
+6. Use the **Custom markers** button on the map to show or hide the private marker layer.
 
 Marker names appear beside visible markers at closer zoom levels. The overlay is noninteractive so normal map dragging, zooming, and touch gestures continue to pass directly to SondeHub.
 
@@ -310,16 +310,16 @@ On a real device, verify:
 
 ### Supported-page boundary
 
-Saved marker names, coordinates, icons, colors, and diameters remain inside extension contexts. An isolated content script reads only page-visible map geometry and sends that nonpersonal viewport state into a transparent extension-origin iframe. The iframe reads extension storage and draws the markers; same-origin protections prevent SondeHub page scripts from reading its marker DOM.
+Saved marker names, coordinates, icons, colors, and diameters remain inside Firefox's isolated content-script world. The extension renders them in a closed shadow root whose host sits in Leaflet's map pane and mirrors the active tile container's zoom transform. This gives markers the map's compositor-driven pan and zoom motion without exposing the marker tree or values to SondeHub page scripts.
 
-The page can detect, hide, or reposition the generic overlay iframe and toggle button because it owns the surrounding document. It does not receive stored marker values. The overlay never posts marker data back to the parent page.
+The page can detect, hide, or reposition the generic host and toggle button because it owns the surrounding document. It cannot inspect the closed marker tree and does not receive stored marker values through messages or page events.
 
 ## Architecture and repository layout
 
 The extension avoids SondeHub's page JavaScript and uses two isolated components:
 
-1. `src/content/map-overlay-host.js` runs as an isolated content script. It derives the current Web Mercator viewport from page-visible Leaflet tile geometry and hosts a generic transparent iframe. It never reads extension storage.
-2. `src/overlay/overlay.html` is an extension-origin document. It privately reads validated `browser.storage.sync` records, projects coordinates into the supplied viewport, and renders a noninteractive marker layer that page scripts cannot inspect.
+1. `src/content/map-overlay-host.js` runs in Firefox's isolated content-script world and privately reads validated `browser.storage.sync` records.
+2. It renders markers into a retained closed shadow root mounted in Leaflet's map pane. Panning is inherited directly from that pane, while tile-container zoom transforms are mirrored before paint; no frame-by-frame viewport sampling is required.
 
 User-facing popup text is created with DOM text APIs. SVG is selected only from the generated, fixed Heroicons allowlist; CSV, storage, and page input cannot supply SVG markup.
 
@@ -328,8 +328,7 @@ User-facing popup text is created with DOM text APIs. SVG is selected only from 
 examples/              Example CSV input
 icons/                 Extension application icon
 scripts/               Catalog generation, provenance, lint, and packaging
-src/content/           Isolated SondeHub viewport integration
-src/overlay/           Private extension-origin map renderer
+src/content/           Isolated private Leaflet marker layer
 src/options/           Location management interface
 src/shared/            Icons, validation, transport, and storage logic
 test/                  Node.js test suite
