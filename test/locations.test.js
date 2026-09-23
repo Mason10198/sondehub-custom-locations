@@ -38,7 +38,7 @@ test("inherited marker appearance resolves through configurable defaults", () =>
 });
 
 test("validates global and per-location marker diameters", () => {
-  assert.equal(api.validateSettings({}).value.markerDiameter, 26);
+  assert.equal(api.validateSettings({}).value.markerDiameter, 22);
   assert.equal(api.validateSettings({ markerDiameter: 20 }).value.markerDiameter, 20);
   assert.equal(api.validateSettings({ markerDiameter: 64 }).value.markerDiameter, 64);
   assert.match(api.validateSettings({ markerDiameter: 19 }).errors[0], /20 to 64/);
@@ -116,10 +116,10 @@ test("empty CSV backups still round-trip default settings", () => {
 
 test("imports version 2 and 3 backups with the legacy marker diameter", () => {
   const v2 = api.importCsv("name,icon,icon_color,background_color,lat,long,default_icon_color,default_background_color,sondehub_csv_version\nA,,,,1,2,#112233,#abcdef,2");
-  assert.equal(v2.settings.markerDiameter, 26);
+  assert.equal(v2.settings.markerDiameter, 22);
   assert.equal(v2.locations[0].markerDiameter, null);
   const v3 = api.importCsv("name,icon,icon_color,background_color,lat,long,default_icon,default_icon_color,default_background_color,sondehub_csv_version\nA,,,,1,2,home,#112233,#abcdef,3");
-  assert.equal(v3.settings.markerDiameter, 26);
+  assert.equal(v3.settings.markerDiameter, 22);
 });
 
 test("imports version 1 minimal CSV and version 4 diameter metadata", () => {

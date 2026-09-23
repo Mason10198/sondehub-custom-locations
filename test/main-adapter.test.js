@@ -81,15 +81,15 @@ test("registers a late Leaflet layer control once without retrying marker render
   assert.equal(adapter.group.markers.length, 1);
 });
 
-test("keeps a 16px glyph when the circle is reduced to 26px", () => {
+test("keeps a 16px glyph when the circle is reduced to 22px", () => {
   const adapter = runAdapter();
-  const message = protocol.serialize([{ name: "Compact", icon: "pin", iconColor: "#000000", backgroundColor: "#facc15", markerDiameter: 26, lat: 1, long: 2 }]);
+  const message = protocol.serialize([{ name: "Compact", icon: "pin", iconColor: "#000000", backgroundColor: "#facc15", markerDiameter: 22, lat: 1, long: 2 }]);
   adapter.listeners.get("sondehub-custom-locations:update")({ detail: message });
   const icon = adapter.group.markers[0].options.icon;
-  assert.match(icon.html, /width:26px;height:26px/);
+  assert.match(icon.html, /width:22px;height:22px/);
   assert.match(icon.html, /width:16px;height:16px/);
-  assert.deepEqual(Array.from(icon.iconSize), [26, 26]);
-  assert.deepEqual(Array.from(icon.iconAnchor), [13, 13]);
+  assert.deepEqual(Array.from(icon.iconSize), [22, 22]);
+  assert.deepEqual(Array.from(icon.iconAnchor), [11, 11]);
 });
 
 test("ignores malformed text transport without changing existing markers", () => {

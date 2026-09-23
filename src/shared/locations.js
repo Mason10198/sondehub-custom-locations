@@ -11,7 +11,7 @@
   const { DEFAULT_ICON, ICONS, normalizeIcon } = iconCatalog;
   const DEFAULT_ICON_COLOR = "#000000";
   const DEFAULT_BACKGROUND_COLOR = "#facc15";
-  const DEFAULT_MARKER_DIAMETER = 26;
+  const DEFAULT_MARKER_DIAMETER = 22;
   const MIN_MARKER_DIAMETER = 20;
   const MAX_MARKER_DIAMETER = 64;
   const COLOR_PATTERN = /^#[0-9a-f]{6}$/i;

@@ -127,7 +127,7 @@ Import behavior:
 - A nonblank imported color is stored as a per-location override, even when it equals the current default.
 - Missing or blank colors inherit the synchronized default colors and follow later default changes.
 - Rows containing a nonblank invalid color are skipped and reported.
-- Marker diameter is a whole number from `20` to `64` pixels, with a `26` pixel default. Missing or blank values inherit the synchronized default diameter.
+- Marker diameter is a whole number from `20` to `64` pixels, with a `22` pixel default. Missing or blank values inherit the synchronized default diameter.
 - **Export CSV backup** writes every saved location, appearance override, coordinate, and synchronized default appearance to a portable CSV file. Inherited appearance cells remain blank so inheritance survives a round trip.
 - Importing an extension-generated backup restores its default appearance as well as its locations.
 - Exported CSV files can be imported on desktop or Android in either add or replace mode.

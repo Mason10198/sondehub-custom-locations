@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [1.6.3] - 2026-09-23
+
+- Reduced the default marker circle diameter from 26 to 22 pixels while retaining the 16-pixel icon glyph.
+
 ## [1.6.2] - 2026-09-23
 
 - Moved marker defaults to the top of the options page.

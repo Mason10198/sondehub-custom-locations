@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SondeHub Custom Locations",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "description": "Add and manage local custom markers on the public SondeHub Tracker.",
   "permissions": ["storage"],
   "content_scripts": [
