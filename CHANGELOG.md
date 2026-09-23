@@ -10,6 +10,7 @@ All notable changes to this project are documented here.
 - Added prepared AMO listing/reviewer text, public screenshots, a code of conduct, and a pull-request template.
 - Added public-repository badges and reviewer-source verification to CI.
 - Replaced the page-world Leaflet bridge with a private extension-origin overlay so saved marker values are no longer exposed to SondeHub page scripts.
+- Made the private overlay event-driven and compositor-accelerated so marker nodes persist and track map pans and fractional zoom states without repeated DOM reconstruction or constant polling.
 - Declared Firefox Sync coordinate transport as required `locationInfo` in Firefox's built-in data consent metadata.
 
 ## [1.6.3] - 2026-09-23

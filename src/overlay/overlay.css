@@ -20,6 +20,8 @@ body,
 
 .marker {
   position: absolute;
+  left: 0;
+  top: 0;
   display: grid;
   place-items: center;
   box-sizing: border-box;
@@ -28,7 +30,8 @@ body,
   background: var(--marker-background);
   color: var(--marker-color);
   box-shadow: 0 1px 3px #0008;
-  transform: translate(-50%, -50%);
+  transform: translate3d(-10000px, -10000px, 0) translate(-50%, -50%);
+  will-change: transform;
   contain: layout style;
 }
 

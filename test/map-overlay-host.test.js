@@ -26,7 +26,7 @@ test("infers the Leaflet viewport from page-visible XYZ tile geometry", () => {
   assert.ok(Math.abs(viewport.centerLong - (-2.24)) < 0.1, viewport.centerLong);
 });
 
-test("rejects zoom-animation transforms and malformed tile URLs", () => {
+test("tracks zoom-animation scale and rejects malformed tile URLs", () => {
   const map = { clientWidth: 700, clientHeight: 759, querySelectorAll() { return [scaled, malformed]; } };
   const mapPane = node("translate3d(0px, 0px, 0px)", map);
   const scaledParent = node("scale(1.5)", mapPane);
@@ -34,6 +34,9 @@ test("rejects zoom-animation transforms and malformed tile URLs", () => {
   scaled.style.width = "256px";
   const malformed = node("translate3d(0px, 0px, 0px)", mapPane, { src: "https://example.invalid/no-tile.png", width: 256 });
   malformed.style.width = "256px";
+  const viewport = host.inferViewport(map, { getComputedStyle: () => ({ transform: "none" }) });
+  assert.ok(Math.abs(viewport.zoom - (5 + Math.log2(1.5))) < 1e-9);
+  map.querySelectorAll = () => [malformed];
   assert.equal(host.inferViewport(map, { getComputedStyle: () => ({ transform: "none" }) }), null);
 });
 

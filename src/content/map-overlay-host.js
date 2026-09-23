@@ -8,7 +8,8 @@
   const OVERLAY_ID = "sondehub-custom-locations-private-overlay";
   const TOGGLE_ID = "sondehub-custom-locations-toggle";
   const MESSAGE_TYPE = "sondehub-custom-locations:viewport";
-  const POLL_MS = 100;
+  const MOUNT_POLL_MS = 500;
+  const ACTIVE_TRACKING_MS = 350;
 
   function transformParts(value) {
     if (!value || value === "none") return { x: 0, y: 0, scale: 1 };
@@ -56,13 +57,15 @@
     if (current !== mapElement) return null;
     let x = 0;
     let y = 0;
-    for (const node of chain.reverse()) {
+    let scale = 1;
+    for (const node of chain) {
       const part = nodeTransform(node, view);
-      if (!Number.isFinite(part.scale) || Math.abs(part.scale - 1) > 0.0001) return null;
-      x += part.x;
-      y += part.y;
+      if (!Number.isFinite(part.scale) || part.scale <= 0) return null;
+      x = part.x + part.scale * x;
+      y = part.y + part.scale * y;
+      scale *= part.scale;
     }
-    return { x, y };
+    return { x, y, scale };
   }
 
   function pixelToLongitude(pixel, scale) {
@@ -87,20 +90,20 @@
       if (!local) continue;
       const tileSize = Number.parseFloat(tile.style?.width || "") || Number(tile.width) || 256;
       if (!(tileSize > 0)) continue;
-      const worldSize = tileSize * (2 ** coordinates.z);
-      const centerPixelX = coordinates.x * tileSize - local.x + width / 2;
-      const centerPixelY = coordinates.y * tileSize - local.y + height / 2;
+      const worldSize = tileSize * (2 ** coordinates.z) * local.scale;
+      const centerPixelX = coordinates.x * tileSize * local.scale - local.x + width / 2;
+      const centerPixelY = coordinates.y * tileSize * local.scale - local.y + height / 2;
       const centerLat = pixelToLatitude(centerPixelY, worldSize);
       const centerLong = pixelToLongitude(centerPixelX, worldSize);
       if (![centerLat, centerLong].every(Number.isFinite) || centerLat < -90 || centerLat > 90) continue;
-      return Object.freeze({ type: MESSAGE_TYPE, version: 1, width, height, zoom: coordinates.z, centerLat, centerLong });
+      return Object.freeze({ type: MESSAGE_TYPE, version: 1, width, height, zoom: coordinates.z + Math.log2(local.scale), centerLat, centerLong });
     }
     return null;
   }
 
   function sameViewport(left, right) {
     if (!left || !right) return false;
-    return left.width === right.width && left.height === right.height && left.zoom === right.zoom && Math.abs(left.centerLat - right.centerLat) < 1e-9 && Math.abs(left.centerLong - right.centerLong) < 1e-9;
+    return left.width === right.width && left.height === right.height && Math.abs(left.zoom - right.zoom) < 1e-9 && Math.abs(left.centerLat - right.centerLat) < 1e-9 && Math.abs(left.centerLong - right.centerLong) < 1e-9;
   }
 
   function styleHost(element, styles) {
@@ -119,7 +122,15 @@
     let loaded = false;
     let visible = true;
     let lastViewport = null;
-    let timer = null;
+    let mountTimer = null;
+    let frame = null;
+    let activeUntil = 0;
+    let mapObserver = null;
+    let resizeObserver = null;
+
+    function now() {
+      return view.performance && typeof view.performance.now === "function" ? view.performance.now() : Date.now();
+    }
 
     function sendViewport(force = false) {
       if (!loaded || !overlay || !visible || !mapElement) return;
@@ -128,6 +139,42 @@
       lastViewport = viewport;
       // Only public map viewport geometry crosses this boundary. Extension-private marker data never does.
       overlay.contentWindow.postMessage(viewport, "*");
+    }
+
+    function trackFrame() {
+      frame = null;
+      sendViewport();
+      if (now() < activeUntil) frame = view.requestAnimationFrame(trackFrame);
+    }
+
+    function activateTracking(duration = ACTIVE_TRACKING_MS) {
+      activeUntil = Math.max(activeUntil, now() + duration);
+      if (frame === null) frame = view.requestAnimationFrame(trackFrame);
+    }
+
+    function observeMap() {
+      mapObserver?.disconnect();
+      resizeObserver?.disconnect();
+      mapObserver = new view.MutationObserver((records) => {
+        const relevant = records.some((record) => {
+          const element = record.target;
+          if (!element || !element.classList) return false;
+          return element === mapElement || element.classList.contains("leaflet-map-pane") || element.classList.contains("leaflet-tile-pane") || element.classList.contains("leaflet-tile-container") || element.classList.contains("leaflet-tile");
+        });
+        if (relevant) activateTracking();
+      });
+      mapObserver.observe(mapElement, { attributes: true, attributeFilter: ["class", "src", "style"], childList: true, subtree: true });
+      if (typeof view.ResizeObserver === "function") {
+        resizeObserver = new view.ResizeObserver(() => activateTracking());
+        resizeObserver.observe(mapElement);
+      }
+      const trackingDurations = { pointerup: 800, pointercancel: 800, wheel: 800, transitionrun: 1200, transitionend: 150 };
+      for (const eventName of ["pointerdown", "pointermove", "pointerup", "pointercancel", "wheel", "transitionrun", "transitionend"]) {
+        mapElement.addEventListener(eventName, (event) => {
+          if (eventName === "pointermove" && event.buttons === 0) return;
+          activateTracking(trackingDurations[eventName] || ACTIVE_TRACKING_MS);
+        }, { passive: true });
+      }
     }
 
     function mount() {
@@ -142,7 +189,7 @@
       overlay.tabIndex = -1;
       overlay.src = extension.runtime.getURL("src/overlay/overlay.html");
       styleHost(overlay, { position: "absolute", inset: "0", width: "100%", height: "100%", border: "0", background: "transparent", "pointer-events": "none", "z-index": "625" });
-      overlay.addEventListener("load", () => { loaded = true; sendViewport(true); }, { once: true });
+      overlay.addEventListener("load", () => { loaded = true; sendViewport(true); activateTracking(); }, { once: true });
 
       toggle = doc.createElement("button");
       toggle.id = TOGGLE_ID;
@@ -158,17 +205,32 @@
         if (visible) sendViewport(true);
       });
       mapElement.append(overlay, toggle);
+      observeMap();
+      activateTracking();
       return true;
     }
 
     function tick() {
-      if (!mount()) return;
-      sendViewport();
+      if (!overlay || !overlay.isConnected || !mapElement || !mapElement.isConnected) mount();
     }
 
-    timer = view.setInterval(tick, POLL_MS);
+    mountTimer = view.setInterval(tick, MOUNT_POLL_MS);
     tick();
-    return Object.freeze({ stop() { if (timer !== null) view.clearInterval(timer); overlay?.remove(); toggle?.remove(); view.__sondeHubCustomLocationsPrivateOverlay = false; }, tick, get overlay() { return overlay; }, get toggle() { return toggle; } });
+    return Object.freeze({
+      stop() {
+        if (mountTimer !== null) view.clearInterval(mountTimer);
+        if (frame !== null) view.cancelAnimationFrame(frame);
+        mapObserver?.disconnect();
+        resizeObserver?.disconnect();
+        overlay?.remove();
+        toggle?.remove();
+        view.__sondeHubCustomLocationsPrivateOverlay = false;
+      },
+      tick,
+      activateTracking,
+      get overlay() { return overlay; },
+      get toggle() { return toggle; }
+    });
   }
 
   return Object.freeze({ MESSAGE_TYPE, OVERLAY_ID, TOGGLE_ID, transformParts, tileCoordinates, inferViewport, sameViewport, start });

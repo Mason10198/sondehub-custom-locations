@@ -7,6 +7,7 @@ const viewport = Object.freeze({ type: overlay.MESSAGE_TYPE, version: 1, width: 
 
 test("validates exact bounded viewport messages", () => {
   assert.deepEqual(overlay.validViewport(viewport), viewport);
+  assert.equal(overlay.validViewport({ ...viewport, zoom: 10.5 }).zoom, 10.5);
   assert.equal(overlay.validViewport({ ...viewport, extra: true }), null);
   assert.equal(overlay.validViewport({ ...viewport, zoom: 25 }), null);
   assert.equal(overlay.validViewport({ ...viewport, centerLat: 91 }), null);
@@ -29,4 +30,8 @@ test("wraps longitude to the nearest world copy", () => {
 test("keeps the compact default glyph at 16px", () => {
   assert.equal(overlay.glyphSize(22), 16);
   assert.equal(overlay.glyphSize(44), 27);
+});
+
+test("moves persistent marker nodes with compositor transforms", () => {
+  assert.equal(overlay.markerTransform({ x: 400.5, y: 300.25 }), "translate3d(400.5px, 300.25px, 0) translate(-50%, -50%)");
 });

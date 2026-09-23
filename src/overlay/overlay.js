@@ -16,7 +16,7 @@
     if (value.type !== MESSAGE_TYPE || value.version !== 1) return null;
     if (![value.width, value.height, value.zoom, value.centerLat, value.centerLong].every(Number.isFinite)) return null;
     if (value.width <= 0 || value.width > 10000 || value.height <= 0 || value.height > 10000) return null;
-    if (!Number.isInteger(value.zoom) || value.zoom < 0 || value.zoom > 24) return null;
+    if (value.zoom < 0 || value.zoom > 24) return null;
     if (value.centerLat < -90 || value.centerLat > 90 || value.centerLong < -540 || value.centerLong > 540) return null;
     return Object.freeze({ type: MESSAGE_TYPE, version: 1, width: value.width, height: value.height, zoom: value.zoom, centerLat: value.centerLat, centerLong: value.centerLong });
   }
@@ -41,6 +41,10 @@
     return Math.min(diameter - 4, Math.max(16, Math.round(diameter * 0.62)));
   }
 
+  function markerTransform(point) {
+    return `translate3d(${point.x}px, ${point.y}px, 0) translate(-50%, -50%)`;
+  }
+
   function start(environment = {}) {
     const view = environment.window || (typeof window !== "undefined" ? window : null);
     const doc = environment.document || (typeof document !== "undefined" ? document : null);
@@ -53,19 +57,28 @@
     const repository = repositories.createRepository(extension.storage.sync, extension.storage.local);
     let viewport = null;
     let locations = [];
+    const markers = new Map();
 
-    function render() {
-      rootElement.replaceChildren();
+    function updatePositions() {
       if (!viewport) return;
       rootElement.classList.toggle("labels-hidden", viewport.zoom < MIN_LABEL_ZOOM);
       const margin = 80;
       for (const location of locations.slice(0, MAX_LOCATIONS)) {
+        const marker = markers.get(location.id);
+        if (!marker) continue;
         const point = project(location.lat, location.long, viewport);
-        if (point.x < -margin || point.y < -margin || point.x > viewport.width + margin || point.y > viewport.height + margin) continue;
+        const hidden = point.x < -margin || point.y < -margin || point.x > viewport.width + margin || point.y > viewport.height + margin;
+        marker.hidden = hidden;
+        if (!hidden) marker.style.transform = markerTransform(point);
+      }
+    }
+
+    function rebuildMarkers() {
+      const fragment = doc.createDocumentFragment();
+      markers.clear();
+      for (const location of locations.slice(0, MAX_LOCATIONS)) {
         const marker = doc.createElement("div");
         marker.className = "marker";
-        marker.style.left = `${point.x}px`;
-        marker.style.top = `${point.y}px`;
         marker.style.width = `${location.markerDiameter}px`;
         marker.style.height = `${location.markerDiameter}px`;
         marker.style.setProperty("--marker-color", location.iconColor);
@@ -79,14 +92,17 @@
         label.className = "marker-label";
         label.textContent = location.name;
         marker.append(icon, label);
-        rootElement.append(marker);
+        markers.set(location.id, marker);
+        fragment.append(marker);
       }
+      rootElement.replaceChildren(fragment);
+      updatePositions();
     }
 
     async function loadLocations() {
       try {
         locations = await repository.getResolved();
-        render();
+        rebuildMarkers();
       } catch (error) {
         console.warn("SondeHub Custom Locations: unable to read saved locations", error);
       }
@@ -97,14 +113,14 @@
       const next = validViewport(event.data);
       if (!next) return;
       viewport = next;
-      render();
+      updatePositions();
     });
     extension.storage.onChanged.addListener((changes, areaName) => {
       if ((areaName === "sync" || areaName === "local") && repositories.isLocationChange(changes)) loadLocations();
     });
     loadLocations();
-    return Object.freeze({ render, loadLocations, get locations() { return locations; }, get viewport() { return viewport; } });
+    return Object.freeze({ updatePositions, rebuildMarkers, loadLocations, get locations() { return locations; }, get viewport() { return viewport; } });
   }
 
-  return Object.freeze({ MESSAGE_TYPE, MIN_LABEL_ZOOM, MAX_LOCATIONS, validViewport, worldPixel, project, glyphSize, start });
+  return Object.freeze({ MESSAGE_TYPE, MIN_LABEL_ZOOM, MAX_LOCATIONS, validViewport, worldPixel, project, glyphSize, markerTransform, start });
 });
