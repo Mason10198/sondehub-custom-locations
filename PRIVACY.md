@@ -2,7 +2,7 @@
 
 Effective September 23, 2026.
 
-SondeHub Custom Locations does not collect, sell, share, or transmit user data to the developer. It has no project-operated server, account system, analytics, telemetry, advertising, or direct network requests.
+SondeHub Custom Locations does not collect, sell, share, or transmit user data to the developer. It has no project-operated server, account system, analytics, telemetry, advertising, or direct extension network requests.
 
 ## Data stored by the extension
 
@@ -14,7 +14,9 @@ The extension stores marker names, coordinates, appearance settings, and interna
 
 ## Supported SondeHub pages
 
-To display a marker with the site's Leaflet map, the extension passes the marker name, coordinates, icon key, colors, and circle diameter to the supported SondeHub page while that tab is open. The page can inspect displayed marker data. Do not add a location that must remain secret from the SondeHub page displaying it.
+Saved marker names, coordinates, icon keys, colors, and circle diameters are rendered inside a transparent extension-origin iframe. SondeHub page scripts cannot read that iframe's marker content under browser same-origin protections. The page receives no stored marker values.
+
+An isolated content script reads only the map's page-visible tile geometry so the extension iframe can align its private marker overlay. The page can detect or hide the generic iframe and toggle button, but the overlay never posts marker data to the parent page.
 
 ## Permissions
 
@@ -25,6 +27,8 @@ The only extension API permission is `storage`. Content scripts run only on:
 - `https://amateur.sondehub.org/*`
 
 Extension pages use a content security policy that blocks network connections and remote resources.
+
+The Firefox built-in consent declaration is `locationInfo` because Firefox Sync may transport saved coordinates between the user's desktop Firefox profiles. The developer does not receive synchronized data.
 
 ## Deletion
 

@@ -1,14 +1,33 @@
 {
   "name": "sondehub-custom-locations",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "private": true,
   "description": "Firefox WebExtension for custom SondeHub Tracker map locations",
   "type": "commonjs",
+  "author": "Mason Nelson",
+  "homepage": "https://github.com/Mason10198/sondehub-custom-locations#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mason10198/sondehub-custom-locations.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Mason10198/sondehub-custom-locations/issues"
+  },
+  "keywords": [
+    "firefox",
+    "firefox-extension",
+    "leaflet",
+    "radiosonde",
+    "sondehub",
+    "webextension"
+  ],
   "scripts": {
     "test": "node --test test/*.test.js",
     "generate:icons": "node scripts/generate-icon-catalog.js",
     "verify:vendor": "node scripts/verify-vendored-assets.js",
     "verify:package": "python3 scripts/verify-package.py",
+    "package:source": "python3 scripts/package-source.py",
+    "verify:source": "python3 scripts/verify-source.py",
     "lint": "node scripts/check-extension.js",
     "package": "python3 scripts/package.py"
   },

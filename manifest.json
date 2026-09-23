@@ -1,20 +1,20 @@
 {
   "manifest_version": 3,
   "name": "SondeHub Custom Locations",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "description": "Add and manage local custom markers on the public SondeHub Tracker.",
   "permissions": ["storage"],
   "content_scripts": [
     {
       "matches": ["https://tracker.sondehub.org/*", "https://sondehub.org/*", "https://amateur.sondehub.org/*"],
-      "js": ["src/shared/icons.js", "src/shared/locations.js", "src/shared/protocol.js", "src/content/main-adapter.js"],
-      "run_at": "document_idle",
-      "world": "MAIN"
-    },
-    {
-      "matches": ["https://tracker.sondehub.org/*", "https://sondehub.org/*", "https://amateur.sondehub.org/*"],
-      "js": ["src/shared/icons.js", "src/shared/locations.js", "src/shared/protocol.js", "src/shared/storage.js", "src/content/storage-bridge.js"],
+      "js": ["src/content/map-overlay-host.js"],
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/overlay/overlay.html"],
+      "matches": ["https://tracker.sondehub.org/*", "https://sondehub.org/*", "https://amateur.sondehub.org/*"]
     }
   ],
   "options_ui": {
@@ -32,7 +32,7 @@
     "gecko": {
       "id": "sondehub-custom-locations@sondehub-tools.local",
       "data_collection_permissions": {
-        "required": ["none"]
+        "required": ["locationInfo"]
       },
       "strict_min_version": "140.0"
     },

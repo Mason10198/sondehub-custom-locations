@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [1.6.4] - 2026-09-23
+
+- Added a deterministic Mozilla reviewer source archive with byte-for-byte XPI reproduction checks.
+- Added prepared AMO listing/reviewer text, public screenshots, a code of conduct, and a pull-request template.
+- Added public-repository badges and reviewer-source verification to CI.
+- Replaced the page-world Leaflet bridge with a private extension-origin overlay so saved marker values are no longer exposed to SondeHub page scripts.
+- Declared Firefox Sync coordinate transport as required `locationInfo` in Firefox's built-in data consent metadata.
+
 ## [1.6.3] - 2026-09-23
 
 - Reduced the default marker circle diameter from 26 to 22 pixels while retaining the 16-pixel icon glyph.
@@ -78,7 +86,8 @@ All notable changes to this project are documented here.
 - Added bounded one-way Firefox isolated-world to page-world transport.
 - Added deterministic unsigned XPI packaging and desktop Firefox verification.
 
-[Unreleased]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.6.3...HEAD
+[Unreleased]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.6.4...HEAD
+[1.6.4]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.6.3...v1.6.4
 [1.6.3]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.6.2...v1.6.3
 [1.6.2]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.6.1...v1.6.2
 [1.6.1]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.6.0...v1.6.1

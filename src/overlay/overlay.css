@@ -1,0 +1,60 @@
+:root {
+  color-scheme: light;
+  background: transparent;
+}
+
+html,
+body,
+#markers {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+  pointer-events: none;
+}
+
+#markers {
+  position: relative;
+}
+
+.marker {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  border: 2px solid var(--marker-color);
+  border-radius: 50%;
+  background: var(--marker-background);
+  color: var(--marker-color);
+  box-shadow: 0 1px 3px #0008;
+  transform: translate(-50%, -50%);
+  contain: layout style;
+}
+
+.marker svg {
+  display: block;
+  width: var(--glyph-size);
+  height: var(--glyph-size);
+}
+
+.marker-label {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 4px);
+  max-width: 180px;
+  padding: 2px 5px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: rgb(17 24 39 / 88%);
+  color: #fff;
+  font: 600 11px/1.25 system-ui, sans-serif;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 1px #000;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.labels-hidden .marker-label {
+  display: none;
+}

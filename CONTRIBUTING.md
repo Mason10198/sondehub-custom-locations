@@ -2,6 +2,8 @@
 
 Contributions are welcome. Keep changes focused, preserve the extension's no-backend privacy model and browser-managed sync boundary, and include tests for behavior changes.
 
+Participation is governed by [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
+
 By submitting a contribution, you confirm that the work is your own or that you have the right to submit it under the project's MIT license. Preserve copyright, license, and third-party attribution notices.
 
 ## Development setup
@@ -19,6 +21,7 @@ npm ci
 npm test
 npm run lint
 npm run package
+npm run verify:source
 ```
 
 The project has no runtime npm dependencies. `npm ci` validates the committed lockfile and creates no dependency tree beyond the project metadata.
@@ -31,9 +34,11 @@ Run the complete local checks:
 npm test
 npm run lint
 npm run package
+npm run verify:package
+npm run verify:source
 python3 -m zipfile -t dist/sondehub-custom-locations-*.xpi
 npx --yes web-ext@latest lint --source-dir . \
-  --ignore-files scripts/package.py scripts/verify-package.py
+  --ignore-files scripts/package.py scripts/verify-package.py scripts/package-source.py scripts/verify-source.py
 git diff --check
 ```
 

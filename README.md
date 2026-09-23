@@ -6,15 +6,19 @@ This is an independent community project. It is not affiliated with, sponsored b
 
 - **Firefox desktop:** 140 or newer
 - **Firefox for Android:** 142 or newer
-- **Current version:** 1.6.3
+- **Current version:** 1.6.4
 - **License:** MIT
-- **Status:** source and unsigned builds are available; persistent installation requires Mozilla signing
+- **Status:** prepared for AMO submission; no Mozilla-signed public release yet
+
+[![CI](https://github.com/Mason10198/sondehub-custom-locations/actions/workflows/ci.yml/badge.svg)](https://github.com/Mason10198/sondehub-custom-locations/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 The extension has no project-operated backend, account, analytics, telemetry, remotely loaded resources, or direct network requests. Desktop locations use Firefox's browser-managed `storage.sync`; Firefox may send that data through the user's Firefox Sync account. Android uses the same API locally but does not synchronize extension data, so CSV backup and restore is provided for every platform.
 
 ## Contents
 
 - [Features](#features)
+- [Screenshots](#screenshots)
 - [Install for development](#install-for-development)
 - [Use the extension](#use-the-extension)
 - [CSV import](#csv-import)
@@ -32,7 +36,7 @@ The extension has no project-operated backend, account, analytics, telemetry, re
 ## Features
 
 - Runs only on `tracker.sondehub.org`, `sondehub.org`, and `amateur.sondehub.org`.
-- Adds markers in a separate Leaflet overlay named **Custom locations**.
+- Draws markers in a private extension-origin overlay above the SondeHub map.
 - Adds, edits, and deletes locations from a responsive options page.
 - Synchronizes locations between desktop Firefox profiles signed in to the same Firefox account with extension syncing enabled.
 - Exports and imports portable CSV backups on desktop and mobile.
@@ -44,6 +48,14 @@ The extension has no project-operated backend, account, analytics, telemetry, re
 - Includes all 316 optimized Heroicons v2.2.0 Micro SVGs.
 - Provides a responsive, searchable icon chooser with live previews and touch-friendly controls.
 - Preserves legacy icon names and migrates previously stored larger Heroicons variants to the matching Micro icon.
+
+## Screenshots
+
+| Marker defaults on mobile | Searchable icon chooser |
+| --- | --- |
+| ![Marker defaults shown first in the mobile options page](docs/screenshots/mobile-options.png) | ![Searchable bundled icon chooser at a narrow mobile width](docs/screenshots/icon-chooser-mobile.png) |
+
+![A synthetic custom marker displayed on the SondeHub map](docs/screenshots/custom-marker-map.png)
 
 ## Install for development
 
@@ -87,8 +99,9 @@ This launches a disposable Firefox development profile and is also temporary.
 3. Enter a location name and decimal latitude and longitude. Enable only the appearance overrides that location needs.
 4. Select **Save location**.
 5. Open or return to a supported SondeHub map.
-6. Enable **Custom locations** in the map's layer control if it is not already visible.
-7. Select a marker to view its name and coordinates.
+6. Use the **Custom markers** button on the map to show or hide the private overlay.
+
+Marker names appear beside visible markers at closer zoom levels. The overlay is noninteractive so normal map dragging, zooming, and touch gestures continue to pass directly to SondeHub.
 
 Editing or deleting a location updates supported SondeHub tabs without a reload. **Delete all** requires confirmation.
 
@@ -152,9 +165,10 @@ npm test
 npm run lint
 npm run package
 npm run verify:package
-python3 -m zipfile -t dist/sondehub-custom-locations-1.6.3.xpi
+npm run verify:source
+python3 -m zipfile -t dist/sondehub-custom-locations-1.6.4.xpi
 npx --yes web-ext@latest lint --source-dir . \
-  --ignore-files scripts/package.py scripts/verify-package.py
+  --ignore-files scripts/package.py scripts/verify-package.py scripts/package-source.py scripts/verify-source.py
 ```
 
 What these commands do:
@@ -165,6 +179,7 @@ What these commands do:
 - `npm run lint` checks the manifest, generated catalog, third-party provenance, runtime network-API prohibition, local-only options page, required assets, and JavaScript syntax.
 - `npm run package` creates `dist/sondehub-custom-locations-<version>.xpi`.
 - `npm run verify:package` builds the XPI twice, compares SHA-256 hashes, checks ZIP integrity and duplicate paths, and verifies the runtime-only allowlist and required licenses.
+- `npm run verify:source` creates the Mozilla reviewer source archive, extracts it into a clean temporary directory, reruns vendor generation and tests, and reproduces a byte-identical XPI.
 - `web-ext lint` applies Mozilla's current add-on validation rules.
 
 `src/shared/icons.js` is generated. Do not edit it manually.
@@ -174,7 +189,7 @@ What these commands do:
 The packaging script:
 
 - Reads the version from `manifest.json`.
-- Includes only 14 allowlisted runtime and license files. The 316 source SVGs stay in the repository for provenance checks but are not duplicated in the XPI because the generated local catalog already contains them.
+- Includes only 15 allowlisted runtime and license files. The 316 source SVGs stay in the repository for provenance checks but are not duplicated in the XPI because the generated local catalog already contains them.
 - Refuses symlinks and special files.
 - Sorts archive paths and uses fixed ZIP timestamps for deterministic output.
 - Produces an **unsigned** XPI. Renaming or building an XPI does not sign it.
@@ -192,12 +207,13 @@ Recommended release procedure:
 
 1. Update `manifest.json`, `package.json`, `package-lock.json`, and [`CHANGELOG.md`](CHANGELOG.md) to the same version.
 2. Run every command in [Complete local verification](#complete-local-verification).
-3. Record the SHA-256 printed by `npm run verify:package` and inspect the exact XPI that will be submitted.
-4. Submit that XPI to AMO and complete the required listing, privacy, and compatibility information.
-5. Test the Mozilla-signed artifact in a clean Firefox profile.
-6. Tag the exact source commit and attach only the verified signed or unsigned artifact with an unambiguous filename.
+3. Commit the complete release source, documentation, and reviewer instructions, then create the annotated version tag on that exact commit.
+4. Record the XPI and source-archive SHA-256 values and inspect the exact files that will be submitted.
+5. Submit the XPI and reviewer source ZIP to AMO and complete the required listing, privacy, and compatibility information.
+6. Test the Mozilla-signed artifact in clean desktop and physical Android Firefox installations.
+7. Publish release notes and attach artifacts only when their filenames clearly identify whether they are signed, unsigned, or reviewer source.
 
-The repository's detailed pre-submission and post-signing checks are in [`PUBLISHING.md`](PUBLISHING.md). The public privacy statement is in [`PRIVACY.md`](PRIVACY.md).
+The prepared listing and reviewer notes are in [`AMO_LISTING.md`](AMO_LISTING.md). Mozilla reviewer build instructions are in [`AMO_SOURCE_README.md`](AMO_SOURCE_README.md). The detailed pre-submission and post-signing checks are in [`PUBLISHING.md`](PUBLISHING.md), and the public privacy statement is in [`PRIVACY.md`](PRIVACY.md).
 
 For a Mozilla-signed self-distributed desktop build, open `about:addons`, use the gear menu, choose **Install Add-on From File…**, and select the signed XPI. Standard Firefox Release and Beta do not normally install an unsigned XPI persistently.
 
@@ -214,7 +230,7 @@ Requirements: Android Platform Tools (`adb`), a connected Android device or emul
 ```sh
 adb devices
 npx --yes web-ext@latest lint --source-dir . \
-  --ignore-files scripts/package.py scripts/verify-package.py
+  --ignore-files scripts/package.py scripts/verify-package.py scripts/package-source.py scripts/verify-source.py
 npx --yes web-ext@latest run \
   --source-dir . \
   --target firefox-android \
@@ -283,27 +299,27 @@ On a real device, verify:
 ## Privacy and permissions
 
 - **API permission:** only `storage`, used for browser-managed desktop sync and local Android storage.
-- **Page access:** static content scripts match only `tracker.sondehub.org`, `sondehub.org`, and `amateur.sondehub.org`; no separate `host_permissions` block is requested.
+- **Page access:** one isolated content script matches only `tracker.sondehub.org`, `sondehub.org`, and `amateur.sondehub.org`; no separate `host_permissions` block is requested.
 - No project backend, developer account system, analytics, telemetry, tracking, cloud database, CDN, external options-page links, remotely loaded resources, or direct extension network requests.
 - On desktop, Firefox itself may transmit extension storage through the user's Firefox Sync account. The extension does not choose the server, hold credentials, or receive the data.
 - Extension pages use a restrictive content security policy with `connect-src 'none'` and local-only scripts and styles.
-- The AMO data-collection declaration is `none`.
+- The AMO built-in consent declaration is `locationInfo` because saved coordinates can be transported by Firefox Sync. The developer does not receive that data.
 - Default appearance and location records synchronize through the same browser-managed storage area.
 - Deleting all locations removes location records but preserves the selected default icon, colors, and circle diameter.
 - Firefox account, profile backup, Sync, clearing, and removal behavior remains controlled by Firefox.
 
 ### Supported-page boundary
 
-To render a marker with the site's existing Leaflet map, the extension passes the marker name, icon key, colors, circle diameter, latitude, and longitude into the supported page realm. The page can inspect that displayed data while its tab is open. Do not store a location that must remain secret from the supported SondeHub page.
+Saved marker names, coordinates, icons, colors, and diameters remain inside extension contexts. An isolated content script reads only page-visible map geometry and sends that nonpersonal viewport state into a transparent extension-origin iframe. The iframe reads extension storage and draws the markers; same-origin protections prevent SondeHub page scripts from reading its marker DOM.
 
-The bridge is one-way: it sends bounded, validated display snapshots and does not accept page-triggered requests for storage reads.
+The page can detect, hide, or reposition the generic overlay iframe and toggle button because it owns the surrounding document. It does not receive stored marker values. The overlay never posts marker data back to the parent page.
 
 ## Architecture and repository layout
 
-Firefox isolates normal content scripts from page globals such as `window.map` and `window.L`. The extension uses two narrow components:
+The extension avoids SondeHub's page JavaScript and uses two isolated components:
 
-1. `src/content/storage-bridge.js` runs in the isolated extension world, reads the validated `browser.storage.sync` repository, and sends only display fields through a JSON-string `CustomEvent`.
-2. `src/content/main-adapter.js` runs in Firefox's MAIN content-script world, waits for SondeHub's Leaflet map, and owns one independent `L.LayerGroup`.
+1. `src/content/map-overlay-host.js` runs as an isolated content script. It derives the current Web Mercator viewport from page-visible Leaflet tile geometry and hosts a generic transparent iframe. It never reads extension storage.
+2. `src/overlay/overlay.html` is an extension-origin document. It privately reads validated `browser.storage.sync` records, projects coordinates into the supplied viewport, and renders a noninteractive marker layer that page scripts cannot inspect.
 
 User-facing popup text is created with DOM text APIs. SVG is selected only from the generated, fixed Heroicons allowlist; CSV, storage, and page input cannot supply SVG markup.
 
@@ -312,7 +328,8 @@ User-facing popup text is created with DOM text APIs. SVG is selected only from 
 examples/              Example CSV input
 icons/                 Extension application icon
 scripts/               Catalog generation, provenance, lint, and packaging
-src/content/           SondeHub page integration
+src/content/           Isolated SondeHub viewport integration
+src/overlay/           Private extension-origin map renderer
 src/options/           Location management interface
 src/shared/            Icons, validation, transport, and storage logic
 test/                  Node.js test suite
@@ -323,7 +340,7 @@ third_party/heroicons/ Pinned Heroicons source and upstream license
 
 ## Limitations
 
-- SondeHub Tracker and Amateur are third-party applications. A change to their Leaflet globals or layer control may require an adapter update.
+- SondeHub Tracker and Amateur are third-party applications. A change to their map element or XYZ Leaflet tile layout may require a viewport adapter update.
 - Address geocoding is not included; enter decimal coordinates directly.
 - Firefox Sync must be enabled for extensions on each desktop profile. Propagation is asynchronous and requires the same signed extension ID.
 - Firefox for Android does not synchronize WebExtension storage; use CSV backup and restore there.
@@ -336,6 +353,8 @@ third_party/heroicons/ Pinned Heroicons source and upstream license
 ## Contributing and security
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for development and pull-request requirements.
+
+Participation is governed by [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
 
 See [`SUPPORT.md`](SUPPORT.md) before opening a usage, compatibility, or feature issue.
 
