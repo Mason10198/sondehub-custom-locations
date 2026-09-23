@@ -1,2 +1,5 @@
 # Vendored Heroicons are integrity-checked byte-for-byte.
 third_party/heroicons/** text eol=lf
+
+# Generated catalog is compared byte-for-byte with generator output.
+src/shared/icons.js text eol=lf
