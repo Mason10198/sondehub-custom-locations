@@ -11,6 +11,9 @@
   const { DEFAULT_ICON, ICONS, normalizeIcon } = iconCatalog;
   const DEFAULT_ICON_COLOR = "#000000";
   const DEFAULT_BACKGROUND_COLOR = "#facc15";
+  const DEFAULT_MARKER_DIAMETER = 28;
+  const MIN_MARKER_DIAMETER = 20;
+  const MAX_MARKER_DIAMETER = 64;
   const COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 
   function normalizeColor(value, fallback) {
@@ -18,18 +21,26 @@
     return COLOR_PATTERN.test(color) ? color.toLowerCase() : fallback;
   }
 
+  function markerDiameterFrom(value, fallback) {
+    const diameter = typeof value === "number" ? value : Number(String(value == null ? "" : value).trim());
+    return Number.isInteger(diameter) && diameter >= MIN_MARKER_DIAMETER && diameter <= MAX_MARKER_DIAMETER ? diameter : fallback;
+  }
+
   function validateSettings(input) {
     const iconInput = String(input && input.icon != null ? input.icon : "").trim();
     const iconColorInput = String(input && input.iconColor != null ? input.iconColor : "").trim();
     const backgroundColorInput = String(input && input.backgroundColor != null ? input.backgroundColor : "").trim();
+    const markerDiameterInput = String(input && input.markerDiameter != null ? input.markerDiameter : "").trim();
     const errors = [];
     if (iconColorInput && !COLOR_PATTERN.test(iconColorInput)) errors.push("default icon color must be a six-digit hex color such as #000000");
     if (backgroundColorInput && !COLOR_PATTERN.test(backgroundColorInput)) errors.push("default background color must be a six-digit hex color such as #facc15");
+    if (markerDiameterInput && markerDiameterFrom(markerDiameterInput, null) === null) errors.push(`default marker diameter must be a whole number from ${MIN_MARKER_DIAMETER} to ${MAX_MARKER_DIAMETER}`);
     if (errors.length) return { ok: false, errors };
     return { ok: true, value: Object.freeze({
       icon: normalizeIcon(iconInput),
       iconColor: normalizeColor(iconColorInput, DEFAULT_ICON_COLOR),
-      backgroundColor: normalizeColor(backgroundColorInput, DEFAULT_BACKGROUND_COLOR)
+      backgroundColor: normalizeColor(backgroundColorInput, DEFAULT_BACKGROUND_COLOR),
+      markerDiameter: markerDiameterFrom(markerDiameterInput, DEFAULT_MARKER_DIAMETER)
     }) };
   }
 
@@ -51,12 +62,14 @@
     const allowGeneratedId = !options || options.allowGeneratedId !== false;
     const inheritMissingIcon = Boolean(options && options.inheritMissingIcon);
     const inheritMissingColors = Boolean(options && options.inheritMissingColors);
+    const inheritMissingDiameter = Boolean(options && options.inheritMissingDiameter);
     const name = String(input && input.name != null ? input.name : "").trim();
     const latitude = numberFrom(input && (input.lat ?? input.latitude));
     const longitude = numberFrom(input && (input.long ?? input.lng ?? input.longitude));
     const iconInput = String(input && input.icon != null ? input.icon : "").trim();
     const iconColorInput = String(input && (input.iconColor ?? input.icon_color) != null ? (input.iconColor ?? input.icon_color) : "").trim();
     const backgroundColorInput = String(input && (input.backgroundColor ?? input.background_color) != null ? (input.backgroundColor ?? input.background_color) : "").trim();
+    const markerDiameterInput = String(input && (input.markerDiameter ?? input.marker_diameter) != null ? (input.markerDiameter ?? input.marker_diameter) : "").trim();
     const errors = [];
     if (!name) errors.push("name is required");
     if (name.length > 120) errors.push("name must be 120 characters or fewer");
@@ -64,6 +77,7 @@
     if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) errors.push("longitude must be a number from -180 to 180");
     if (iconColorInput && !COLOR_PATTERN.test(iconColorInput)) errors.push("icon color must be a six-digit hex color such as #000000");
     if (backgroundColorInput && !COLOR_PATTERN.test(backgroundColorInput)) errors.push("background color must be a six-digit hex color such as #facc15");
+    if (markerDiameterInput && markerDiameterFrom(markerDiameterInput, null) === null) errors.push(`marker diameter must be a whole number from ${MIN_MARKER_DIAMETER} to ${MAX_MARKER_DIAMETER}`);
     if (errors.length) return { ok: false, errors };
     const requestedId = String(input && input.id != null ? input.id : "").trim();
     return { ok: true, value: Object.freeze({
@@ -72,20 +86,22 @@
       icon: iconInput ? normalizeIcon(iconInput) : (inheritMissingIcon ? null : DEFAULT_ICON),
       iconColor: iconColorInput ? normalizeColor(iconColorInput, DEFAULT_ICON_COLOR) : (inheritMissingColors ? null : DEFAULT_ICON_COLOR),
       backgroundColor: backgroundColorInput ? normalizeColor(backgroundColorInput, DEFAULT_BACKGROUND_COLOR) : (inheritMissingColors ? null : DEFAULT_BACKGROUND_COLOR),
+      markerDiameter: markerDiameterInput ? markerDiameterFrom(markerDiameterInput, DEFAULT_MARKER_DIAMETER) : (inheritMissingDiameter ? null : DEFAULT_MARKER_DIAMETER),
       lat: latitude,
       long: longitude
     }) };
   }
 
-  function resolveLocationColors(input, settings) {
-    const checked = validateLocation(input, { allowGeneratedId: false, inheritMissingIcon: true, inheritMissingColors: true });
+  function resolveLocationAppearance(input, settings) {
+    const checked = validateLocation(input, { allowGeneratedId: false, inheritMissingIcon: true, inheritMissingColors: true, inheritMissingDiameter: true });
     if (!checked.ok) return checked;
     const defaults = validateSettings(settings).value;
     return { ok: true, value: Object.freeze({
       ...checked.value,
       icon: checked.value.icon || defaults.icon,
       iconColor: checked.value.iconColor || defaults.iconColor,
-      backgroundColor: checked.value.backgroundColor || defaults.backgroundColor
+      backgroundColor: checked.value.backgroundColor || defaults.backgroundColor,
+      markerDiameter: checked.value.markerDiameter || defaults.markerDiameter
     }) };
   }
 
@@ -135,7 +151,7 @@
     if (headerIndex === -1) return { locations: [], skipped: [{ row: 1, reason: "CSV is empty" }] };
     const header = rows[headerIndex].values.map((field) => field.trim().toLowerCase());
     const required = ["name", "lat", "long"];
-    const columns = required.concat(["icon", "icon_color", "background_color", "default_icon", "default_icon_color", "default_background_color", "sondehub_csv_version"]);
+    const columns = required.concat(["icon", "icon_color", "background_color", "marker_diameter", "default_icon", "default_icon_color", "default_background_color", "default_marker_diameter", "sondehub_csv_version"]);
     const indices = Object.fromEntries(columns.map((column) => [column, header.indexOf(column)]));
     const missing = required.filter((column) => indices[column] === -1);
     if (missing.length) return { locations: [], skipped: [{ row: 1, reason: `Missing required column(s): ${missing.join(", ")}` }], fatal: "Invalid CSV header" };
@@ -147,12 +163,13 @@
       if (!row.some((field) => field.trim() !== "")) continue;
       const exportVersion = indices.sondehub_csv_version === -1 ? "" : row[indices.sondehub_csv_version];
       const rawName = row[indices.name];
-      const exportedName = (exportVersion === "1" || exportVersion === "2" || exportVersion === "3") && rawName.startsWith("'") ? rawName.slice(1) : rawName;
-      if (!importedSettings && (exportVersion === "2" || exportVersion === "3") && indices.default_icon_color !== -1 && indices.default_background_color !== -1) {
+      const exportedName = (["1", "2", "3", "4"].includes(exportVersion)) && rawName.startsWith("'") ? rawName.slice(1) : rawName;
+      if (!importedSettings && (["2", "3", "4"].includes(exportVersion)) && indices.default_icon_color !== -1 && indices.default_background_color !== -1) {
         const checkedSettings = validateSettings({
-          icon: exportVersion === "3" && indices.default_icon !== -1 ? row[indices.default_icon] : DEFAULT_ICON,
+          icon: (exportVersion === "3" || exportVersion === "4") && indices.default_icon !== -1 ? row[indices.default_icon] : DEFAULT_ICON,
           iconColor: row[indices.default_icon_color],
-          backgroundColor: row[indices.default_background_color]
+          backgroundColor: row[indices.default_background_color],
+          markerDiameter: exportVersion === "4" && indices.default_marker_diameter !== -1 ? row[indices.default_marker_diameter] : DEFAULT_MARKER_DIAMETER
         });
         if (!checkedSettings.ok) return { locations: [], skipped: [{ row: record.row, reason: checkedSettings.errors.join("; ") }], fatal: "Invalid CSV defaults" };
         importedSettings = checkedSettings.value;
@@ -163,9 +180,10 @@
         icon: indices.icon === -1 ? "" : row[indices.icon],
         iconColor: indices.icon_color === -1 ? "" : row[indices.icon_color],
         backgroundColor: indices.background_color === -1 ? "" : row[indices.background_color],
+        markerDiameter: indices.marker_diameter === -1 ? "" : row[indices.marker_diameter],
         lat: row[indices.lat],
         long: row[indices.long]
-      }, { inheritMissingIcon: true, inheritMissingColors: true });
+      }, { inheritMissingIcon: true, inheritMissingColors: true, inheritMissingDiameter: true });
       if (result.ok) locations.push(result.value);
       else skipped.push({ row: record.row, reason: result.errors.join("; ") });
     }
@@ -179,18 +197,18 @@
 
   function exportCsv(value, settings) {
     const defaults = validateSettings(settings).value;
-    const header = ["name", "icon", "icon_color", "background_color", "lat", "long", "default_icon", "default_icon_color", "default_background_color", "sondehub_csv_version"];
+    const header = ["name", "icon", "icon_color", "background_color", "marker_diameter", "lat", "long", "default_icon", "default_icon_color", "default_background_color", "default_marker_diameter", "sondehub_csv_version"];
     const rows = Array.isArray(value) ? value.reduce((all, item) => {
-      const result = validateLocation(item, { allowGeneratedId: false, inheritMissingIcon: true, inheritMissingColors: true });
+      const result = validateLocation(item, { allowGeneratedId: false, inheritMissingIcon: true, inheritMissingColors: true, inheritMissingDiameter: true });
       if (result.ok) {
         const safeName = /^[=+\-@']/.test(result.value.name) ? `'${result.value.name}` : result.value.name;
-        all.push([safeName, result.value.icon || "", result.value.iconColor || "", result.value.backgroundColor || "", result.value.lat, result.value.long, defaults.icon, defaults.iconColor, defaults.backgroundColor, "3"]);
+        all.push([safeName, result.value.icon || "", result.value.iconColor || "", result.value.backgroundColor || "", result.value.markerDiameter || "", result.value.lat, result.value.long, defaults.icon, defaults.iconColor, defaults.backgroundColor, defaults.markerDiameter, "4"]);
       }
       return all;
     }, []) : [];
-    if (!rows.length) rows.push(["", "", "", "", "", "", defaults.icon, defaults.iconColor, defaults.backgroundColor, "3"]);
+    if (!rows.length) rows.push(["", "", "", "", "", "", "", defaults.icon, defaults.iconColor, defaults.backgroundColor, defaults.markerDiameter, "4"]);
     return [header].concat(rows).map((row) => row.map(csvField).join(",")).join("\r\n") + "\r\n";
   }
 
-  return { DEFAULT_ICON, DEFAULT_ICON_COLOR, DEFAULT_BACKGROUND_COLOR, ICONS, normalizeIcon, normalizeColor, validateSettings, createId, validateLocation, resolveLocationColors, parseCsv, importCsv, exportCsv };
+  return { DEFAULT_ICON, DEFAULT_ICON_COLOR, DEFAULT_BACKGROUND_COLOR, DEFAULT_MARKER_DIAMETER, MIN_MARKER_DIAMETER, MAX_MARKER_DIAMETER, ICONS, normalizeIcon, normalizeColor, markerDiameterFrom, validateSettings, createId, validateLocation, resolveLocationAppearance, resolveLocationColors: resolveLocationAppearance, parseCsv, importCsv, exportCsv };
 });

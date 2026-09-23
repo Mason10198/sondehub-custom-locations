@@ -2,84 +2,135 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>SondeHub Custom Locations</title>
   <link rel="stylesheet" href="options.css">
 </head>
 <body>
   <main>
-    <header><h1>SondeHub Custom Locations</h1><p>Firefox Sync keeps desktop locations aligned. CSV backup and restore works on desktop and mobile.</p></header>
-    <section class="card" aria-labelledby="defaults-title">
-      <h2 id="defaults-title">Default marker appearance</h2>
-      <p>Locations without their own overrides use this icon and these colors. Changing them updates every inherited marker.</p>
-      <form id="defaults-form">
-        <label>Default icon <select id="default-icon"></select></label>
-        <div class="colors">
-          <label>Default icon color <input id="default-icon-color" type="color" value="#000000"></label>
-          <label>Default background color <input id="default-background-color" type="color" value="#facc15"></label>
-        </div>
-        <button type="submit">Save default appearance</button>
-      </form>
-      <p id="defaults-message" class="message" role="status" aria-live="polite"></p>
-    </section>
+    <header class="page-header">
+      <h1>SondeHub Custom Locations</h1>
+    </header>
+
     <section class="card" aria-labelledby="add-title">
-      <h2 id="add-title">Add or edit location</h2>
+      <h2 id="add-title">Add location</h2>
       <form id="location-form">
         <input id="location-id" type="hidden">
-        <label>Name <input id="name" required maxlength="120" autocomplete="off"></label>
-        <fieldset class="icon-picker" aria-describedby="icon-picker-help">
-          <legend>Icon</legend>
-          <label><input id="override-icon" type="checkbox"> Override default icon</label>
-          <input id="icon" name="icon" type="hidden">
-          <div class="icon-preview" id="icon-preview" role="status" aria-live="polite"><span id="icon-preview-image" aria-hidden="true"></span><span id="icon-preview-label"></span></div>
-          <div id="icon-override-controls" hidden>
-            <div class="icon-search-controls">
-              <label for="icon-search">Search Heroicons</label>
-              <input id="icon-search" type="search" autocomplete="off" aria-controls="icon-results" aria-describedby="icon-results-status" placeholder="e.g. radio, map pin, cloud">
-              <button id="clear-icon-search" type="button">Clear search</button>
+        <label class="field">Name<input id="name" required maxlength="120" autocomplete="off"></label>
+        <div class="coordinates">
+          <label class="field">Latitude<input id="lat" required inputmode="decimal" placeholder="-90 to 90"></label>
+          <label class="field">Longitude<input id="long" required inputmode="decimal" placeholder="-180 to 180"></label>
+        </div>
+
+        <fieldset class="appearance-editor">
+          <legend>Appearance</legend>
+          <div class="appearance-preview-row">
+            <div class="marker-preview large" id="location-preview" aria-hidden="true"></div>
+            <div><strong id="location-preview-label"></strong><p id="appearance-summary" class="section-note"></p></div>
+          </div>
+
+          <div class="override-list">
+            <div class="override-item">
+              <label class="toggle-row"><input id="override-icon" type="checkbox"><span>Custom icon</span></label>
+              <div id="icon-override-controls" class="override-controls" hidden>
+                <input id="icon" name="icon" type="hidden">
+                <button id="choose-location-icon" class="secondary wide-mobile" type="button">Choose icon</button>
+                <span id="location-icon-label" class="setting-value"></span>
+              </div>
             </div>
-            <p id="icon-picker-help" class="muted">Search the complete vendored Heroicons v2.2.0 Micro set. Every icon is bundled with the extension.</p>
-            <p id="icon-results-status" class="icon-results-status" role="status" aria-live="polite"></p>
-            <details id="icon-results-panel" class="icon-results-panel">
-              <summary>Choose an override icon</summary>
-              <div id="icon-results" class="icon-results" role="group" aria-label="Heroicons search results"></div>
-              <p id="icon-empty" class="muted" hidden>No Heroicons Micro icon matches this search.</p>
-            </details>
+            <div class="override-item">
+              <label class="toggle-row"><input id="override-icon-color" type="checkbox"><span>Custom icon color</span></label>
+              <div id="icon-color-controls" class="override-controls" hidden>
+                <input id="icon-color" type="color" value="#000000">
+                <span id="icon-color-value" class="setting-value"></span>
+              </div>
+            </div>
+            <div class="override-item">
+              <label class="toggle-row"><input id="override-background-color" type="checkbox"><span>Custom background</span></label>
+              <div id="background-color-controls" class="override-controls" hidden>
+                <input id="background-color" type="color" value="#facc15">
+                <span id="background-color-value" class="setting-value"></span>
+              </div>
+            </div>
+            <div class="override-item">
+              <label class="toggle-row"><input id="override-marker-diameter" type="checkbox"><span>Custom circle diameter</span></label>
+              <div id="marker-diameter-controls" class="override-controls" hidden>
+                <span class="number-control"><input id="marker-diameter" type="number" min="20" max="64" step="1" inputmode="numeric" value="28"><span>px</span></span>
+              </div>
+            </div>
           </div>
-          <p class="muted">Unchecked locations follow the default icon above. Checking this makes the selected icon a per-location override.</p>
-          <button id="clear-icon-override" class="secondary" type="button">Use default icon</button>
+          <button id="clear-appearance-overrides" class="text-button" type="button" hidden>Use all defaults</button>
         </fieldset>
-        <fieldset class="color-picker">
-          <legend>Marker colors</legend>
-          <div class="colors">
-            <label class="color-override"><span><input id="override-icon-color" type="checkbox"> Override icon color</span><input id="icon-color" type="color" value="#000000" disabled></label>
-            <label class="color-override"><span><input id="override-background-color" type="checkbox"> Override background color</span><input id="background-color" type="color" value="#facc15" disabled></label>
-          </div>
-          <p class="muted">Unchecked colors follow the defaults above. Checking a color makes it a per-location override.</p>
-          <button id="clear-color-overrides" class="secondary" type="button">Use default colors</button>
-        </fieldset>
-        <div class="coordinates"><label>Latitude <input id="lat" required inputmode="decimal" placeholder="-90 to 90"></label><label>Longitude <input id="long" required inputmode="decimal" placeholder="-180 to 180"></label></div>
-        <div class="actions"><button type="submit">Save location</button><button id="cancel-edit" type="button" hidden>Cancel edit</button></div>
+
+        <div class="actions"><button class="primary" type="submit">Save location</button><button id="cancel-edit" class="secondary" type="button" hidden>Cancel</button></div>
       </form>
       <p id="form-message" class="message" role="status" aria-live="polite"></p>
     </section>
-    <section class="card" aria-labelledby="import-title">
-      <h2 id="import-title">Backup and restore</h2>
-      <p>Desktop Firefox synchronizes saved locations through your Firefox account. Firefox for Android does not synchronize extension storage, so use CSV export and import when moving data to or from mobile.</p>
-      <button id="export-button" type="button">Export CSV backup</button>
-      <h3>Import CSV</h3>
-      <p>Required columns: <code>name,lat,long</code>. Optional override columns: <code>icon,icon_color,background_color</code>. Blank or omitted override values inherit the global defaults. Colors use six-digit hex values such as <code>#000000</code>.</p>
-      <input id="csv-file" type="file" accept=".csv,text/csv">
-      <fieldset><legend>Import mode</legend><label><input type="radio" name="import-mode" value="add" checked> Add to existing</label><label><input type="radio" name="import-mode" value="replace"> Replace all existing</label></fieldset>
-      <button id="import-button" type="button">Import CSV</button>
-      <div id="import-report" class="report" role="status" aria-live="polite"></div>
-    </section>
+
     <section class="card" aria-labelledby="saved-title">
-      <div class="section-heading"><h2 id="saved-title">Saved locations</h2><button id="delete-all" class="danger" type="button">Delete all</button></div>
-      <p id="count" class="muted"></p>
+      <div class="section-heading"><div><h2 id="saved-title">Saved locations</h2><p id="count" class="section-note"></p></div><button id="delete-all" class="danger compact" type="button" hidden>Delete all</button></div>
+      <div id="empty-state" class="empty-state">No saved locations.</div>
       <ul id="locations" class="location-list"></ul>
     </section>
+
+    <section class="card" aria-labelledby="defaults-title">
+      <div class="section-heading">
+        <div>
+          <h2 id="defaults-title">Marker defaults</h2>
+          <p class="section-note">Used when a location has no override.</p>
+        </div>
+        <div class="marker-preview" id="default-preview" aria-hidden="true"></div>
+      </div>
+      <form id="defaults-form">
+        <input id="default-icon" type="hidden">
+        <div class="setting-list">
+          <div class="setting-row">
+            <div><span class="setting-label">Icon</span><span id="default-icon-label" class="setting-value"></span></div>
+            <button id="choose-default-icon" class="secondary compact" type="button">Choose</button>
+          </div>
+          <label class="setting-row color-setting" for="default-icon-color">
+            <span class="setting-label">Icon color</span>
+            <span class="color-control"><span id="default-icon-color-value" class="setting-value"></span><input id="default-icon-color" type="color" value="#000000"></span>
+          </label>
+          <label class="setting-row color-setting" for="default-background-color">
+            <span class="setting-label">Background</span>
+            <span class="color-control"><span id="default-background-color-value" class="setting-value"></span><input id="default-background-color" type="color" value="#facc15"></span>
+          </label>
+          <label class="setting-row" for="default-marker-diameter">
+            <span class="setting-label">Circle diameter</span>
+            <span class="number-control"><input id="default-marker-diameter" type="number" min="20" max="64" step="1" inputmode="numeric" value="28"><span>px</span></span>
+          </label>
+        </div>
+        <button class="primary wide-mobile" type="submit">Save defaults</button>
+      </form>
+      <p id="defaults-message" class="message" role="status" aria-live="polite"></p>
+    </section>
+
+    <details class="card utility-card">
+      <summary>Backup and import</summary>
+      <div class="utility-content">
+        <div class="button-row"><button id="export-button" class="secondary wide-mobile" type="button">Export CSV</button></div>
+        <hr>
+        <h3>Import CSV</h3>
+        <p class="section-note">Required: <code>name</code>, <code>lat</code>, <code>long</code>. Appearance columns are optional.</p>
+        <label class="file-picker"><span>CSV file</span><input id="csv-file" type="file" accept=".csv,text/csv"></label>
+        <fieldset class="import-mode"><legend>Import mode</legend><label><input type="radio" name="import-mode" value="add" checked> Add</label><label><input type="radio" name="import-mode" value="replace"> Replace all</label></fieldset>
+        <button id="import-button" class="primary wide-mobile" type="button">Import CSV</button>
+        <div id="import-report" class="report" role="status" aria-live="polite"></div>
+      </div>
+    </details>
   </main>
+
+  <dialog id="icon-dialog" aria-labelledby="icon-dialog-title">
+    <div class="dialog-shell">
+      <div class="dialog-header"><div><h2 id="icon-dialog-title">Choose icon</h2><p id="icon-dialog-selection" class="section-note"></p></div><button id="close-icon-dialog" class="icon-close" type="button" aria-label="Close icon chooser">×</button></div>
+      <div class="search-row"><label class="sr-only" for="icon-search">Search icons</label><input id="icon-search" type="search" autocomplete="off" placeholder="Search icons"><button id="clear-icon-search" class="secondary compact" type="button">Clear</button></div>
+      <p id="icon-results-status" class="section-note" role="status" aria-live="polite"></p>
+      <div id="icon-results" class="icon-results" role="group" aria-label="Icons"></div>
+      <p id="icon-empty" class="empty-state" hidden>No matching icons.</p>
+    </div>
+  </dialog>
+
   <script src="../shared/icons.js"></script>
   <script src="../shared/locations.js"></script>
   <script src="../shared/storage.js"></script>

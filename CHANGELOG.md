@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-09-23
+
+- Reworked the options page for small screens with touch-sized controls, compact copy, clearer saved-location rows, and collapsed backup/import tools.
+- Replaced the large native icon list with a reusable searchable icon dialog for default and per-location icon selection.
+- Hid icon, color, and diameter controls until their per-location overrides are enabled.
+- Added synchronized default and per-location override support for marker circle diameter.
+- Added version 4 CSV backup fields for default and overridden marker diameters while retaining `name`, `lat`, and `long` as the only required import columns.
+
 ## [1.5.0] - 2026-09-23
 
 - Made CSV imports require only `name`, `lat`, and `long`; icon and color columns are optional overrides.
@@ -56,7 +64,8 @@ All notable changes to this project are documented here.
 - Added bounded one-way Firefox isolated-world to page-world transport.
 - Added deterministic unsigned XPI packaging and desktop Firefox verification.
 
-[Unreleased]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.2.1...v1.3.0

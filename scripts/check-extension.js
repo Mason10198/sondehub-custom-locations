@@ -15,9 +15,12 @@ for (const script of requiredOptionsScripts) {
   if (offset <= previousScriptOffset) failures.push(`options scripts must load ${requiredOptionsScripts.join(", ")} in order`);
   previousScriptOffset = offset;
 }
-if (!optionsHtml.includes('id="icon-search"') || !optionsHtml.includes('id="icon-results"') || optionsHtml.includes('id="icon-style"') || optionsHtml.includes('<select id="icon" ')) failures.push("options must provide the searchable Heroicons Micro picker without a style selector or native icon select");
+if (!optionsHtml.includes('id="icon-dialog"') || !optionsHtml.includes('id="icon-search"') || !optionsHtml.includes('id="icon-results"') || !optionsHtml.includes('id="choose-default-icon"') || !optionsHtml.includes('id="choose-location-icon"') || optionsHtml.includes('id="icon-style"') || /<select[^>]+id=["'](?:default-)?icon["']/i.test(optionsHtml)) failures.push("options must provide one searchable icon dialog for default and per-location selection without native icon selects");
 if (!optionsHtml.includes('id="export-button"')) failures.push("options must provide portable CSV export");
-if (!optionsHtml.includes('id="defaults-form"') || !optionsHtml.includes('id="default-icon"') || !optionsHtml.includes('id="override-icon"') || !optionsHtml.includes('id="override-icon-color"') || !optionsHtml.includes('id="override-background-color"')) failures.push("options must distinguish synchronized appearance defaults from per-location overrides");
+if (!optionsHtml.includes('id="defaults-form"') || !optionsHtml.includes('id="default-icon"') || !optionsHtml.includes('id="default-marker-diameter"') || !optionsHtml.includes('id="override-icon"') || !optionsHtml.includes('id="override-icon-color"') || !optionsHtml.includes('id="override-background-color"') || !optionsHtml.includes('id="override-marker-diameter"')) failures.push("options must distinguish synchronized appearance defaults from independent per-location overrides");
+for (const unwantedCopy of ["Firefox Sync keeps desktop locations aligned", "Search the complete vendored Heroicons", "Every icon is bundled with the extension"]) {
+  if (optionsHtml.includes(unwantedCopy)) failures.push(`options contains unwanted explanatory copy: ${unwantedCopy}`);
+}
 if (/\b(?:href|src)=["']https?:\/\//i.test(optionsHtml)) failures.push("options must not contain external links or remotely loaded resources");
 if (manifest.manifest_version !== 3) failures.push("manifest_version must be 3");
 if (!Array.isArray(manifest.permissions) || manifest.permissions.length !== 1 || manifest.permissions[0] !== "storage") failures.push("storage must be the only extension API permission");

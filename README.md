@@ -6,7 +6,7 @@ This is an independent community project. It is not affiliated with, sponsored b
 
 - **Firefox desktop:** 140 or newer
 - **Firefox for Android:** 142 or newer
-- **Current release:** 1.5.0
+- **Current release:** 1.6.0
 - **License:** MIT
 - **Status:** source and unsigned builds are available; persistent installation requires Mozilla signing
 
@@ -35,13 +35,13 @@ The extension has no project-operated backend, account, analytics, telemetry, re
 - Adds, edits, and deletes locations from a responsive options page.
 - Synchronizes locations between desktop Firefox profiles signed in to the same Firefox account with extension syncing enabled.
 - Exports and imports portable CSV backups on desktop and mobile.
-- Provides a synchronized default icon and default colors, initially Map pin in black on yellow.
-- Lets individual markers override the icon or either color while inherited markers follow future default changes.
+- Provides synchronized defaults for icon, colors, and circle diameter.
+- Lets individual markers override any appearance setting while inherited markers follow future default changes.
 - Imports CSV files with required `name,lat,long` columns and optional appearance override columns in **add** or **replace all** mode.
 - Reports skipped CSV rows with their source row number and validation error.
 - Updates open SondeHub tabs immediately when locations change.
 - Includes all 316 optimized Heroicons v2.2.0 Micro SVGs.
-- Provides a searchable, keyboard-accessible Micro icon picker with live preview.
+- Provides a responsive, searchable icon chooser with live previews and touch-friendly controls.
 - Preserves legacy icon names and migrates previously stored larger Heroicons variants to the matching Micro icon.
 
 ## Install for development
@@ -82,8 +82,8 @@ This launches a disposable Firefox development profile and is also temporary.
 ## Use the extension
 
 1. Open the extension's **Preferences** page from `about:addons`.
-2. Set the global default marker icon and colors if desired.
-3. Enter a location name and decimal latitude and longitude. Optionally enable per-location icon or color overrides.
+2. Set the default marker icon, colors, and circle diameter if desired.
+3. Enter a location name and decimal latitude and longitude. Enable only the appearance overrides that location needs.
 4. Select **Save location**.
 5. Open or return to a supported SondeHub map.
 6. Enable **Custom locations** in the map's layer control if it is not already visible.
@@ -102,10 +102,10 @@ name,lat,long
 Example:
 
 ```csv
-name,lat,long,icon,icon_color,background_color
-Home,40.7128,-74.0060,,,
-Launch site,34.0522,-118.2437,rocket-launch,#ffffff,#2563eb
-"Field, west",51.5074,-0.1278,landing,#000000,#facc15
+name,lat,long,icon,icon_color,background_color,marker_diameter
+Home,40.7128,-74.0060,,,,
+Launch site,34.0522,-118.2437,rocket-launch,#ffffff,#2563eb,40
+"Field, west",51.5074,-0.1278,landing,#000000,#facc15,
 ```
 
 A complete sample is available at [`examples/locations.csv`](examples/locations.csv).
@@ -114,7 +114,7 @@ Import behavior:
 
 - **Add:** appends valid imported locations to the saved list.
 - **Replace all:** replaces the saved list with valid imported locations.
-- Header names are case-insensitive. The only required columns are `name`, `lat`, and `long`; `icon`, `icon_color`, and `background_color` are optional overrides, and other extra columns are ignored.
+- Header names are case-insensitive. The only required columns are `name`, `lat`, and `long`; `icon`, `icon_color`, `background_color`, and `marker_diameter` are optional overrides, and other extra columns are ignored.
 - Invalid rows are skipped and reported; valid rows in the same file still import.
 - Latitude must be from `-90` to `90`; longitude must be from `-180` to `180`.
 - Names are trimmed, required, and limited to 120 characters.
@@ -127,8 +127,9 @@ Import behavior:
 - A nonblank imported color is stored as a per-location override, even when it equals the current default.
 - Missing or blank colors inherit the synchronized default colors and follow later default changes.
 - Rows containing a nonblank invalid color are skipped and reported.
-- **Export CSV backup** writes every saved location, appearance override, coordinate, and synchronized default appearance to a portable CSV file. Inherited icon and color cells remain blank so inheritance survives a round trip.
-- Importing an extension-generated backup restores its default icon and colors as well as its locations.
+- Marker diameter is a whole number from `20` to `64` pixels. Missing or blank values inherit the synchronized default diameter.
+- **Export CSV backup** writes every saved location, appearance override, coordinate, and synchronized default appearance to a portable CSV file. Inherited appearance cells remain blank so inheritance survives a round trip.
+- Importing an extension-generated backup restores its default appearance as well as its locations.
 - Exported CSV files can be imported on desktop or Android in either add or replace mode.
 - CSV backups intentionally create new internal IDs when imported; display data is preserved.
 - Exports include a `sondehub_csv_version` column and safely prefix spreadsheet-formula-leading names; re-import removes only that export escape and restores the exact name.
@@ -150,7 +151,7 @@ npm test
 npm run lint
 npm run package
 npm run verify:package
-python3 -m zipfile -t dist/sondehub-custom-locations-1.5.0.xpi
+python3 -m zipfile -t dist/sondehub-custom-locations-1.6.0.xpi
 npx --yes web-ext@latest lint --source-dir . \
   --ignore-files scripts/package.py scripts/verify-package.py
 ```

@@ -1,7 +1,7 @@
-name,lat,long,icon,icon_color,background_color
-Home,40.7128,-74.0060,,,
-Launch site,"34.0522","-118.2437",launch,#ffffff,#2563eb
-"Field, west",51.5074,-0.1278,landing,,
-Receiver,48.8566,2.3522,radio,,
-Recovery staging,-33.8688,151.2093,recovery,,
-Weather reference,35.6762,139.6503,cloud,,
+name,lat,long,icon,icon_color,background_color,marker_diameter
+Home,40.7128,-74.0060,,,,
+Launch site,"34.0522","-118.2437",launch,#ffffff,#2563eb,40
+"Field, west",51.5074,-0.1278,landing,,,
+Receiver,48.8566,2.3522,radio,,,32
+Recovery staging,-33.8688,151.2093,recovery,,,
+Weather reference,35.6762,139.6503,cloud,,,
