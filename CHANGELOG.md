@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-09-23
+
+- Added synchronized global default icon and background colors.
+- Made locations without explicit colors inherit live defaults, including CSV rows with omitted or blank color fields.
+- Added independent per-location override controls for icon and background colors.
+- Preserved default settings and override intent in CSV export/import, and migrated legacy black-on-yellow records to inheritance while retaining nondefault custom colors.
+
 ## [1.3.0] - 2026-09-22
 
 - Added browser-managed Firefox Sync for desktop locations with automatic migration from the previous local storage layout.
@@ -42,7 +49,8 @@ All notable changes to this project are documented here.
 - Added bounded one-way Firefox isolated-world to page-world transport.
 - Added deterministic unsigned XPI packaging and desktop Firefox verification.
 
-[Unreleased]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/Mason10198/sondehub-custom-locations/compare/v1.1.0...v1.2.0

@@ -27,7 +27,11 @@ test("storage bridge pushes minimal sync snapshots and ignores page request even
   const onChanged = { addListener(listener) { this.listener = listener; } };
   const browser = {
     storage: {
-      sync: area({ "location:private": { order: 0, location: { id: "private", name: "Home", icon: "pin", lat: 1, long: 2 } } }),
+      sync: area({
+        settings: { iconColor: "#112233", backgroundColor: "#abcdef" },
+        "location:private": { schema: 2, order: 0, location: { id: "private", name: "Home", icon: "pin", iconColor: null, backgroundColor: null, lat: 1, long: 2 } },
+        "location:override": { schema: 2, order: 1, location: { id: "override", name: "Override", icon: "star", iconColor: "#ffffff", backgroundColor: "#2563eb", lat: 3, long: 4 } }
+      }),
       local: area({}),
       onChanged
     }
@@ -38,10 +42,16 @@ test("storage bridge pushes minimal sync snapshots and ignores page request even
   assert.equal(listeners.has("sondehub-custom-locations:request"), false);
   assert.equal(typeof events[0].detail, "string");
   const locations = protocol.message(events[0].detail);
-  assert.deepEqual(locations, [{ name: "Home", icon: "16-solid/map-pin", iconColor: "#000000", backgroundColor: "#facc15", lat: 1, long: 2 }]);
+  assert.deepEqual(locations, [
+    { name: "Home", icon: "16-solid/map-pin", iconColor: "#112233", backgroundColor: "#abcdef", lat: 1, long: 2 },
+    { name: "Override", icon: "16-solid/star", iconColor: "#ffffff", backgroundColor: "#2563eb", lat: 3, long: 4 }
+  ]);
   assert.equal(Object.hasOwn(locations[0], "id"), false);
   assert.equal(listeners.get("sondehub-custom-locations:request"), undefined);
   onChanged.listener({ "location:private": { newValue: {} } }, "sync");
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(events.length, 2);
+  onChanged.listener({ settings: { newValue: {} } }, "sync");
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(events.length, 3);
 });

@@ -17,6 +17,7 @@ for (const script of requiredOptionsScripts) {
 }
 if (!optionsHtml.includes('id="icon-search"') || !optionsHtml.includes('id="icon-results"') || optionsHtml.includes('id="icon-style"') || optionsHtml.includes('<select id="icon" ')) failures.push("options must provide the searchable Heroicons Micro picker without a style selector or native icon select");
 if (!optionsHtml.includes('id="export-button"')) failures.push("options must provide portable CSV export");
+if (!optionsHtml.includes('id="defaults-form"') || !optionsHtml.includes('id="override-icon-color"') || !optionsHtml.includes('id="override-background-color"')) failures.push("options must distinguish synchronized defaults from per-location color overrides");
 if (/\b(?:href|src)=["']https?:\/\//i.test(optionsHtml)) failures.push("options must not contain external links or remotely loaded resources");
 if (manifest.manifest_version !== 3) failures.push("manifest_version must be 3");
 if (!Array.isArray(manifest.permissions) || manifest.permissions.length !== 1 || manifest.permissions[0] !== "storage") failures.push("storage must be the only extension API permission");
@@ -48,6 +49,8 @@ for (const file of files.filter((file) => file.startsWith("src/"))) {
 }
 const optionsSource = fs.readFileSync(path.join(root, "src/options/options.js"), "utf8");
 if (!optionsSource.includes("browser.storage.sync") || !optionsSource.includes("SondeHubLocations.exportCsv")) failures.push("options must use Firefox Sync and local CSV export");
+const bridgeSource = fs.readFileSync(path.join(root, "src/content/storage-bridge.js"), "utf8");
+if (!bridgeSource.includes("repository.getResolved()")) failures.push("storage bridge must resolve inherited colors before page transport");
 for (const asset of ["THIRD_PARTY_NOTICES.md", "third_party/heroicons/LICENSE", "third_party/heroicons/optimized/16/solid/map-pin.svg"]) {
   if (!fs.existsSync(path.join(root, asset))) failures.push(`missing required third-party asset: ${asset}`);
 }

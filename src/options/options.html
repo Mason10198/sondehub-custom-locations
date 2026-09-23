@@ -9,6 +9,18 @@
 <body>
   <main>
     <header><h1>SondeHub Custom Locations</h1><p>Firefox Sync keeps desktop locations aligned. CSV backup and restore works on desktop and mobile.</p></header>
+    <section class="card" aria-labelledby="defaults-title">
+      <h2 id="defaults-title">Default marker colors</h2>
+      <p>Locations without their own color overrides use these colors. Changing them updates every inherited marker.</p>
+      <form id="defaults-form">
+        <div class="colors">
+          <label>Default icon color <input id="default-icon-color" type="color" value="#000000"></label>
+          <label>Default background color <input id="default-background-color" type="color" value="#facc15"></label>
+        </div>
+        <button type="submit">Save default colors</button>
+      </form>
+      <p id="defaults-message" class="message" role="status" aria-live="polite"></p>
+    </section>
     <section class="card" aria-labelledby="add-title">
       <h2 id="add-title">Add or edit location</h2>
       <form id="location-form">
@@ -35,10 +47,11 @@
         <fieldset class="color-picker">
           <legend>Marker colors</legend>
           <div class="colors">
-            <label>Icon color <input id="icon-color" type="color" value="#000000"></label>
-            <label>Background color <input id="background-color" type="color" value="#facc15"></label>
+            <label class="color-override"><span><input id="override-icon-color" type="checkbox"> Override icon color</span><input id="icon-color" type="color" value="#000000" disabled></label>
+            <label class="color-override"><span><input id="override-background-color" type="checkbox"> Override background color</span><input id="background-color" type="color" value="#facc15" disabled></label>
           </div>
-          <button id="reset-colors" class="secondary" type="button">Reset colors</button>
+          <p class="muted">Unchecked colors follow the defaults above. Checking a color makes it a per-location override.</p>
+          <button id="clear-color-overrides" class="secondary" type="button">Use default colors</button>
         </fieldset>
         <div class="coordinates"><label>Latitude <input id="lat" required inputmode="decimal" placeholder="-90 to 90"></label><label>Longitude <input id="long" required inputmode="decimal" placeholder="-180 to 180"></label></div>
         <div class="actions"><button type="submit">Save location</button><button id="cancel-edit" type="button" hidden>Cancel edit</button></div>

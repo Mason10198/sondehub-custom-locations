@@ -8,7 +8,7 @@
     try {
       // The MAIN-world adapter must receive display data to render Leaflet markers.
       // Never export IDs or accept page-originated requests for a fresh read.
-      const detail = SondeHubLocationProtocol.serialize(await repository.getAll());
+      const detail = SondeHubLocationProtocol.serialize(await repository.getResolved());
       if (detail !== null) document.dispatchEvent(new CustomEvent(EVENT, { detail }));
     } catch (error) {
       // Tracker functionality must continue if extension storage is unavailable.

@@ -29,6 +29,13 @@ test("defaults, normalizes, and validates marker colors", () => {
   assert.equal(custom.backgroundColor, "#2563eb");
   assert.deepEqual(api.validateLocation({ name: "Bad", iconColor: "black", backgroundColor: "#123", lat: 1, long: 2 }).errors, ["icon color must be a six-digit hex color such as #000000", "background color must be a six-digit hex color such as #facc15"]);
 });
+test("inherited marker colors resolve through configurable defaults", () => {
+  const inherited = api.validateLocation({ name: "Inherited", lat: 1, long: 2 }, { inheritMissingColors: true }).value;
+  assert.deepEqual({ iconColor: inherited.iconColor, backgroundColor: inherited.backgroundColor }, { iconColor: null, backgroundColor: null });
+  const resolved = api.resolveLocationColors(inherited, { iconColor: "#112233", backgroundColor: "#abcdef" }).value;
+  assert.deepEqual({ iconColor: resolved.iconColor, backgroundColor: resolved.backgroundColor }, { iconColor: "#112233", backgroundColor: "#abcdef" });
+  assert.deepEqual(api.validateSettings({ iconColor: "#AABBCC", backgroundColor: "#123456" }).value, { iconColor: "#aabbcc", backgroundColor: "#123456" });
+});
 test("parses standard quoted CSV fields and escaped quotes", () => {
   assert.deepEqual(api.parseCsv('name,icon,lat,long\r\n"A, B",star,1,2\r\n"A ""quote""",pin,3,4'), [["name", "icon", "lat", "long"], ["A, B", "star", "1", "2"], ['A "quote"', "pin", "3", "4"]]);
 });
@@ -41,13 +48,13 @@ test("imports valid rows and reports physical invalid row numbers", () => {
   assert.equal(result.locations[0].icon, "16-solid/map-pin");
   assert.deepEqual(result.skipped, [{ row: 3, reason: "latitude must be a number from -90 to 90" }, { row: 4, reason: "name is required" }]);
 });
-test("imports optional marker colors and defaults blank or omitted color columns", () => {
+test("imports explicit marker colors as overrides and blank or omitted colors as inherited", () => {
   const custom = api.importCsv("name,icon,lat,long,icon_color,background_color\nCustom,radio,1,2,#ffffff,#2563eb");
   assert.deepEqual({ iconColor: custom.locations[0].iconColor, backgroundColor: custom.locations[0].backgroundColor }, { iconColor: "#ffffff", backgroundColor: "#2563eb" });
   const blank = api.importCsv("name,icon,lat,long,icon_color,background_color\nBlank,radio,1,2,,");
-  assert.deepEqual({ iconColor: blank.locations[0].iconColor, backgroundColor: blank.locations[0].backgroundColor }, { iconColor: "#000000", backgroundColor: "#facc15" });
+  assert.deepEqual({ iconColor: blank.locations[0].iconColor, backgroundColor: blank.locations[0].backgroundColor }, { iconColor: null, backgroundColor: null });
   const omitted = api.importCsv("name,icon,lat,long\nOmitted,radio,1,2");
-  assert.deepEqual({ iconColor: omitted.locations[0].iconColor, backgroundColor: omitted.locations[0].backgroundColor }, { iconColor: "#000000", backgroundColor: "#facc15" });
+  assert.deepEqual({ iconColor: omitted.locations[0].iconColor, backgroundColor: omitted.locations[0].backgroundColor }, { iconColor: null, backgroundColor: null });
   const invalid = api.importCsv("name,icon,lat,long,icon_color,background_color\nBad,radio,1,2,red,#123");
   assert.equal(invalid.locations.length, 0);
   assert.match(invalid.skipped[0].reason, /icon color.*background color/);
@@ -67,18 +74,27 @@ test("rejects headers missing required columns", () => {
   assert.equal(result.fatal, "Invalid CSV header");
   assert.match(result.skipped[0].reason, /icon/);
 });
-test("exports portable CSV backups that round-trip all display fields", () => {
+test("exports portable CSV backups that round-trip overrides and default settings", () => {
   const csv = api.exportCsv([
     { id: "one", name: 'Launch, "North"', icon: "radio", iconColor: "#ffffff", backgroundColor: "#2563eb", lat: 35.5, long: -97.5 },
     { id: "two", name: "Second\nLine", icon: "home", lat: 1, long: 2 }
-  ]);
-  assert.equal(csv.startsWith("name,icon,icon_color,background_color,lat,long,sondehub_csv_version\r\n"), true);
+  ], { iconColor: "#112233", backgroundColor: "#abcdef" });
+  assert.equal(csv.startsWith("name,icon,icon_color,background_color,lat,long,default_icon_color,default_background_color,sondehub_csv_version\r\n"), true);
   const imported = api.importCsv(csv);
   assert.equal(imported.skipped.length, 0);
+  assert.deepEqual(imported.settings, { iconColor: "#112233", backgroundColor: "#abcdef" });
   assert.deepEqual(imported.locations.map(({ id, ...location }) => location), [
     { name: 'Launch, "North"', icon: "16-solid/radio", iconColor: "#ffffff", backgroundColor: "#2563eb", lat: 35.5, long: -97.5 },
-    { name: "Second\nLine", icon: "16-solid/home", iconColor: "#000000", backgroundColor: "#facc15", lat: 1, long: 2 }
+    { name: "Second\nLine", icon: "16-solid/home", iconColor: null, backgroundColor: null, lat: 1, long: 2 }
   ]);
+});
+
+test("empty CSV backups still round-trip default settings", () => {
+  const csv = api.exportCsv([], { iconColor: "#112233", backgroundColor: "#abcdef" });
+  const imported = api.importCsv(csv);
+  assert.deepEqual(imported.locations, []);
+  assert.deepEqual(imported.skipped, []);
+  assert.deepEqual(imported.settings, { iconColor: "#112233", backgroundColor: "#abcdef" });
 });
 
 test("exports spreadsheet-safe names without changing names on re-import", () => {

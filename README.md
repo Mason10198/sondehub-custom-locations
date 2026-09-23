@@ -6,7 +6,7 @@ This is an independent community project. It is not affiliated with, sponsored b
 
 - **Firefox desktop:** 140 or newer
 - **Firefox for Android:** 142 or newer
-- **Current release:** 1.3.0
+- **Current release:** 1.4.0
 - **License:** MIT
 - **Status:** source and unsigned builds are available; persistent installation requires Mozilla signing
 
@@ -35,7 +35,8 @@ The extension has no project-operated backend, account, analytics, telemetry, re
 - Adds, edits, and deletes locations from a responsive options page.
 - Synchronizes locations between desktop Firefox profiles signed in to the same Firefox account with extension syncing enabled.
 - Exports and imports portable CSV backups on desktop and mobile.
-- Lets each marker use a custom icon color and background color, defaulting to black on yellow.
+- Provides synchronized default icon and background colors, initially black on yellow.
+- Lets individual markers override either default color while inherited markers follow future default changes.
 - Imports CSV files with required `name,icon,lat,long` columns and optional color columns in **add** or **replace all** mode.
 - Reports skipped CSV rows with their source row number and validation error.
 - Updates open SondeHub tabs immediately when locations change.
@@ -81,11 +82,12 @@ This launches a disposable Firefox development profile and is also temporary.
 ## Use the extension
 
 1. Open the extension's **Preferences** page from `about:addons`.
-2. Enter a location name, choose an icon, optionally choose its icon and background colors, and enter decimal latitude and longitude.
-3. Select **Save location**.
-4. Open or return to a supported SondeHub map.
-5. Enable **Custom locations** in the map's layer control if it is not already visible.
-6. Select a marker to view its name and coordinates.
+2. Set the global default marker colors if desired.
+3. Enter a location name, choose an icon, optionally enable per-location icon or background color overrides, and enter decimal latitude and longitude.
+4. Select **Save location**.
+5. Open or return to a supported SondeHub map.
+6. Enable **Custom locations** in the map's layer control if it is not already visible.
+7. Select a marker to view its name and coordinates.
 
 Editing or deleting a location updates supported SondeHub tabs without a reload. **Delete all** requires confirmation.
 
@@ -122,9 +124,11 @@ Import behavior:
 - Legacy keys such as `pin`, `home`, `launch`, `landing`, and `radio` remain supported.
 - Missing or unknown icon values use the default Map pin.
 - Colors must be six-digit hexadecimal values such as `#ffffff` or `#2563eb`.
-- Missing or blank colors use the defaults: black icon (`#000000`) and yellow background (`#facc15`).
+- A nonblank imported color is stored as a per-location override, even when it equals the current default.
+- Missing or blank colors inherit the synchronized default colors and follow later default changes.
 - Rows containing a nonblank invalid color are skipped and reported.
-- **Export CSV backup** writes every saved location, icon, color, and coordinate to a portable CSV file.
+- **Export CSV backup** writes every saved location, icon, color override, coordinate, and the synchronized default colors to a portable CSV file. Inherited colors remain blank so inheritance survives a round trip.
+- Importing an extension-generated backup restores its default colors as well as its locations.
 - Exported CSV files can be imported on desktop or Android in either add or replace mode.
 - CSV backups intentionally create new internal IDs when imported; display data is preserved.
 - Exports include a `sondehub_csv_version` column and safely prefix spreadsheet-formula-leading names; re-import removes only that export escape and restores the exact name.
@@ -146,7 +150,7 @@ npm test
 npm run lint
 npm run package
 npm run verify:package
-python3 -m zipfile -t dist/sondehub-custom-locations-1.3.0.xpi
+python3 -m zipfile -t dist/sondehub-custom-locations-1.4.0.xpi
 npx --yes web-ext@latest lint --source-dir . \
   --ignore-files scripts/package.py scripts/verify-package.py
 ```
@@ -280,7 +284,8 @@ On a real device, verify:
 - On desktop, Firefox itself may transmit extension storage through the user's Firefox Sync account. The extension does not choose the server, hold credentials, or receive the data.
 - Extension pages use a restrictive content security policy with `connect-src 'none'` and local-only scripts and styles.
 - The AMO data-collection declaration is `none`.
-- Deleting all locations removes all of the extension's synchronized location records.
+- Default colors and location records synchronize through the same browser-managed storage area.
+- Deleting all locations removes location records but preserves the selected default colors.
 - Firefox account, profile backup, Sync, clearing, and removal behavior remains controlled by Firefox.
 
 ### Supported-page boundary
@@ -319,6 +324,8 @@ third_party/heroicons/ Pinned Heroicons source and upstream license
 - Firefox Sync must be enabled for extensions on each desktop profile. Propagation is asynchronous and requires the same signed extension ID.
 - Firefox for Android does not synchronize WebExtension storage; use CSV backup and restore there.
 - Storage mutations are serialized within one extension context and single-marker changes write only that marker's Sync record. Concurrent edits to the same marker on different desktops can still resolve by Firefox Sync's conflict behavior.
+- Locations imported without colors and locations saved without enabled color overrides inherit the synchronized defaults. Imported explicit colors and enabled editor overrides remain fixed.
+- During migration, legacy black-on-yellow values become inherited; legacy nondefault colors remain overrides.
 - The extension stores and renders at most 250 locations, checks Firefox Sync's per-item and total byte quotas before each write, and bounds page-world and Leaflet work.
 - Firefox for iOS does not run Firefox WebExtensions. Supporting iPhone or iPad would require a separate Safari Web Extension and Xcode application.
 

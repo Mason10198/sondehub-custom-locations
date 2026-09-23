@@ -6,7 +6,9 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function repositoryFactory(locationsApi) {
   "use strict";
   const LEGACY_STORAGE_KEY = "locations";
+  const SETTINGS_KEY = "settings";
   const RECORD_PREFIX = "location:";
+  const RECORD_SCHEMA = 2;
   const MAX_LOCATIONS = 250;
   const SYNC_QUOTA_BYTES = 102400;
   const SYNC_QUOTA_BYTES_PER_ITEM = 8192;
@@ -15,7 +17,7 @@
     const seen = new Set();
     if (!Array.isArray(value)) return [];
     return value.reduce((all, item) => {
-      const result = locationsApi.validateLocation(item);
+      const result = locationsApi.validateLocation(item, { inheritMissingColors: true });
       if (!result.ok || seen.has(result.value.id)) return all;
       seen.add(result.value.id);
       all.push(result.value);
@@ -24,7 +26,7 @@
   }
 
   function isLocationChange(changes) {
-    return Object.keys(changes || {}).some((key) => key === LEGACY_STORAGE_KEY || key.startsWith(RECORD_PREFIX));
+    return Object.keys(changes || {}).some((key) => key === LEGACY_STORAGE_KEY || key === SETTINGS_KEY || key.startsWith(RECORD_PREFIX));
   }
 
   function createRepository(storageArea, legacyLocalArea) {
@@ -42,17 +44,40 @@
       return area && typeof area.get === "function" ? area.get(null) : {};
     }
 
+    function legacyColor(value, fallback) {
+      const normalized = locationsApi.normalizeColor(value, fallback);
+      return normalized === fallback ? null : normalized;
+    }
+
     function recordsFrom(items) {
       return Object.entries(items || {})
         .filter(([key]) => key.startsWith(RECORD_PREFIX))
         .map(([key, record]) => {
-          const checked = locationsApi.validateLocation(record && record.location, { allowGeneratedId: false });
+          const currentSchema = record && record.schema === RECORD_SCHEMA;
+          const source = record && record.location ? { ...record.location } : null;
+          if (source && !currentSchema) {
+            source.iconColor = legacyColor(source.iconColor, locationsApi.DEFAULT_ICON_COLOR);
+            source.backgroundColor = legacyColor(source.backgroundColor, locationsApi.DEFAULT_BACKGROUND_COLOR);
+          }
+          const checked = locationsApi.validateLocation(source, { allowGeneratedId: false, inheritMissingColors: true });
           return checked.ok && checked.value.id && key === `${RECORD_PREFIX}${checked.value.id}`
-            ? { key, location: checked.value, order: Number.isSafeInteger(record.order) && record.order >= 0 ? record.order : Number.MAX_SAFE_INTEGER }
+            ? { key, location: checked.value, order: Number.isSafeInteger(record.order) && record.order >= 0 ? record.order : Number.MAX_SAFE_INTEGER, needsMigration: !currentSchema }
             : null;
         })
         .filter(Boolean)
         .sort((left, right) => left.order - right.order || left.key.localeCompare(right.key));
+    }
+
+    function settingsFrom(items) {
+      return locationsApi.validateSettings(items && items[SETTINGS_KEY]).value;
+    }
+
+    function recordValue(location, order) {
+      return { schema: RECORD_SCHEMA, order, location };
+    }
+
+    function recordItems(records) {
+      return Object.fromEntries(records.map((record) => [record.key, recordValue(record.location, record.order)]));
     }
 
     function assertCapacity(locations) {
@@ -68,33 +93,49 @@
       if (storageBytes(items) > SYNC_QUOTA_BYTES) throw new Error("Firefox Sync storage is full. Shorten location names or remove locations before trying again");
     }
 
-    async function writeRecords(locations) {
+    function withSettings(items, locations) {
+      const result = { ...locations };
+      if (Object.hasOwn(items, SETTINGS_KEY)) result[SETTINGS_KEY] = settingsFrom(items);
+      return result;
+    }
+
+    async function writeRecords(locations, nextSettings) {
       const normalized = normalizeCollection(locations);
+      const checkedSettings = nextSettings == null ? null : locationsApi.validateSettings(nextSettings);
+      if (checkedSettings && !checkedSettings.ok) throw new Error(checkedSettings.errors.join("; "));
       assertCapacity(normalized);
       const current = await readArea(storageArea);
-      const desired = Object.fromEntries(normalized.map((location, order) => [`${RECORD_PREFIX}${location.id}`, { order, location }]));
-      assertSyncQuota(desired);
+      const desired = Object.fromEntries(normalized.map((location, order) => [`${RECORD_PREFIX}${location.id}`, recordValue(location, order)]));
+      const finalItems = checkedSettings ? { ...desired, [SETTINGS_KEY]: checkedSettings.value } : withSettings(current, desired);
+      assertSyncQuota(finalItems);
       const stale = Object.keys(current).filter((key) => key.startsWith(RECORD_PREFIX) && !Object.hasOwn(desired, key));
       const removable = stale.concat(Object.hasOwn(current, LEGACY_STORAGE_KEY) ? [LEGACY_STORAGE_KEY] : []);
-      const projected = { ...current, ...desired };
+      const changes = checkedSettings ? { ...desired, [SETTINGS_KEY]: checkedSettings.value } : desired;
+      const projected = { ...current, ...changes };
       let removedFirst = false;
       if (storageBytes(projected) > SYNC_QUOTA_BYTES && removable.length) {
         await storageArea.remove(removable);
         removedFirst = true;
       }
-      if (Object.keys(desired).length) await storageArea.set(desired);
+      if (Object.keys(changes).length) await storageArea.set(changes);
       if (!removedFirst && removable.length) await storageArea.remove(removable);
       return normalized;
     }
 
     async function migrate() {
       const synced = await readArea(storageArea);
-      const records = recordsFrom(synced).map((record) => record.location);
-      const syncLegacy = normalizeCollection(synced[LEGACY_STORAGE_KEY]);
+      const syncedRecords = recordsFrom(synced);
+      const inheritedLegacyColors = (location) => Object.freeze({
+        ...location,
+        iconColor: legacyColor(location.iconColor, locationsApi.DEFAULT_ICON_COLOR),
+        backgroundColor: legacyColor(location.backgroundColor, locationsApi.DEFAULT_BACKGROUND_COLOR)
+      });
+      const syncLegacy = normalizeCollection(synced[LEGACY_STORAGE_KEY]).map(inheritedLegacyColors);
       const local = legacyLocalArea && legacyLocalArea !== storageArea ? await readArea(legacyLocalArea) : {};
-      const localLegacy = normalizeCollection(local[LEGACY_STORAGE_KEY]);
-      if (!syncLegacy.length && !localLegacy.length) return;
-      const merged = normalizeCollection(records.concat(syncLegacy, localLegacy));
+      const localLegacy = normalizeCollection(local[LEGACY_STORAGE_KEY]).map(inheritedLegacyColors);
+      const needsRecordMigration = syncedRecords.some((record) => record.needsMigration);
+      if (!syncLegacy.length && !localLegacy.length && !needsRecordMigration) return;
+      const merged = normalizeCollection(syncedRecords.map((record) => record.location).concat(syncLegacy, localLegacy));
       await writeRecords(merged);
       if (legacyLocalArea && legacyLocalArea !== storageArea && Object.hasOwn(local, LEGACY_STORAGE_KEY)) await legacyLocalArea.remove(LEGACY_STORAGE_KEY);
     }
@@ -109,10 +150,37 @@
       return recordsFrom(await readArea(storageArea)).map((record) => record.location);
     }
 
-    function replaceAll(locations) { return serialize(async () => { await ensureMigrated(); return writeRecords(locations); }); }
+    async function getSettings() {
+      await ensureMigrated();
+      return settingsFrom(await readArea(storageArea));
+    }
 
-    function addMany(locations) {
+    async function getResolved() {
+      await ensureMigrated();
+      const items = await readArea(storageArea);
+      const settings = settingsFrom(items);
+      return recordsFrom(items).map((record) => locationsApi.resolveLocationColors(record.location, settings).value);
+    }
+
+    function saveSettings(input) {
+      const checked = locationsApi.validateSettings(input);
+      if (!checked.ok) throw new Error(checked.errors.join("; "));
+      return serialize(async () => {
+        await ensureMigrated();
+        const current = await readArea(storageArea);
+        const projected = { ...current, [SETTINGS_KEY]: checked.value };
+        assertSyncQuota(projected);
+        await storageArea.set({ [SETTINGS_KEY]: checked.value });
+        return checked.value;
+      });
+    }
+
+    function replaceAll(locations, settings) { return serialize(async () => { await ensureMigrated(); return writeRecords(locations, settings); }); }
+
+    function addMany(locations, settings) {
       const additions = normalizeCollection(locations);
+      const checkedSettings = settings == null ? null : locationsApi.validateSettings(settings);
+      if (checkedSettings && !checkedSettings.ok) throw new Error(checkedSettings.errors.join("; "));
       return serialize(async () => {
         await ensureMigrated();
         const currentItems = await readArea(storageArea);
@@ -122,33 +190,36 @@
         let nextOrder = currentRecords.reduce((maximum, record) => Math.max(maximum, record.order), -1) + 1;
         for (const location of additions) {
           if (existingIds.has(location.id)) continue;
-          changes[`${RECORD_PREFIX}${location.id}`] = { order: nextOrder, location };
+          changes[`${RECORD_PREFIX}${location.id}`] = recordValue(location, nextOrder);
           existingIds.add(location.id);
           nextOrder += 1;
         }
-        const projected = Object.fromEntries(currentRecords.map((record) => [record.key, { order: record.order, location: record.location }]));
-        Object.assign(projected, changes);
+        if (checkedSettings) changes[SETTINGS_KEY] = checkedSettings.value;
+        const projected = recordItems(currentRecords);
+        Object.assign(projected, Object.fromEntries(Object.entries(changes).filter(([key]) => key.startsWith(RECORD_PREFIX))));
         assertCapacity(Object.values(projected));
-        assertSyncQuota(projected);
+        const projectedItems = checkedSettings ? { ...projected, [SETTINGS_KEY]: checkedSettings.value } : withSettings(currentItems, projected);
+        assertSyncQuota(projectedItems);
         if (Object.keys(changes).length) await storageArea.set(changes);
         return getAll();
       });
     }
 
     function save(input) {
-      const checked = locationsApi.validateLocation(input);
+      const checked = locationsApi.validateLocation(input, { inheritMissingColors: true });
       if (!checked.ok) throw new Error(checked.errors.join("; "));
       return serialize(async () => {
         await ensureMigrated();
-        const currentRecords = recordsFrom(await readArea(storageArea));
+        const currentItems = await readArea(storageArea);
+        const currentRecords = recordsFrom(currentItems);
         const existing = currentRecords.find((record) => record.location.id === checked.value.id);
         const order = existing ? existing.order : currentRecords.reduce((maximum, record) => Math.max(maximum, record.order), -1) + 1;
         const key = `${RECORD_PREFIX}${checked.value.id}`;
-        const record = { order, location: checked.value };
-        const projected = Object.fromEntries(currentRecords.map((item) => [item.key, { order: item.order, location: item.location }]));
+        const record = recordValue(checked.value, order);
+        const projected = recordItems(currentRecords);
         projected[key] = record;
         assertCapacity(Object.values(projected));
-        assertSyncQuota(projected);
+        assertSyncQuota(withSettings(currentItems, projected));
         await storageArea.set({ [key]: record });
         return getAll();
       });
@@ -172,8 +243,8 @@
       });
     }
 
-    return { getAll, replaceAll, addMany, save, remove, clear };
+    return { getAll, getResolved, getSettings, saveSettings, replaceAll, addMany, save, remove, clear };
   }
 
-  return { LEGACY_STORAGE_KEY, RECORD_PREFIX, MAX_LOCATIONS, SYNC_QUOTA_BYTES, SYNC_QUOTA_BYTES_PER_ITEM, normalizeCollection, isLocationChange, createRepository };
+  return { LEGACY_STORAGE_KEY, SETTINGS_KEY, RECORD_PREFIX, RECORD_SCHEMA, MAX_LOCATIONS, SYNC_QUOTA_BYTES, SYNC_QUOTA_BYTES_PER_ITEM, normalizeCollection, isLocationChange, createRepository };
 });
